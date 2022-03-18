@@ -20,6 +20,9 @@ export class CreateEntityModificationHandler implements ModificationHandler<Crea
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.data.entity
+		if (entity.migrations?.enabled === false) {
+			return
+		}
 		if (entity.view) {
 			// BC
 			builder.createView(entity.tableName, {}, entity.view.sql)
@@ -50,6 +53,7 @@ export class CreateEntityModificationHandler implements ModificationHandler<Crea
 				[this.data.entity.name]: {
 					eventLog: { enabled: true },
 					indexes: {},
+					migrations: { enabled: true },
 					...this.data.entity,
 				},
 			},

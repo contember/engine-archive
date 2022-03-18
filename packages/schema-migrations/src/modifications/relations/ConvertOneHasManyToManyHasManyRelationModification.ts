@@ -42,9 +42,12 @@ export class ConvertOneHasManyToManyHasManyRelationModificationHandler implement
 	}
 
 	public createSql(builder: MigrationBuilder): void {
+		const entity = this.schema.model.entities[this.data.entityName]
+		if (!entity.migrations.enabled) {
+			return
+		}
 		const targetEntity = this.schema.model.entities[this.data.owningSide.target]
 		const { relation: oldRelation } = this.getRelation()
-		const entity = this.schema.model.entities[this.data.entityName]
 
 		createJunctionTableSql(builder, this.options.systemSchema, this.schema, entity, targetEntity, normalizeManyHasManyRelation(this.data.owningSide))
 		const joiningTable = this.data.owningSide.joiningTable

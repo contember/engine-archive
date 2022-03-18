@@ -10,6 +10,9 @@ export class CreateViewModificationHandler implements ModificationHandler<Create
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.data.entity
+		if (!entity.migrations.enabled) {
+			return
+		}
 		if (!entity.view) {
 			throw new Error()
 		}

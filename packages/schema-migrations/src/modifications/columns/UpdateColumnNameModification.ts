@@ -11,7 +11,7 @@ export class UpdateColumnNameModificationHandler implements ModificationHandler<
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
-		if (entity.view) {
+		if (entity.view || !entity.migrations.enabled) {
 			return
 		}
 		acceptFieldVisitor(this.schema.model, entity, this.data.fieldName, {

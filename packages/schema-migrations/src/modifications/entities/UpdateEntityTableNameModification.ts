@@ -8,6 +8,9 @@ export class UpdateEntityTableNameModificationHandler implements ModificationHan
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
+		if (!entity.migrations.enabled) {
+			return
+		}
 		if (entity.view) {
 			builder.renameView(entity.tableName, this.data.tableName)
 			return

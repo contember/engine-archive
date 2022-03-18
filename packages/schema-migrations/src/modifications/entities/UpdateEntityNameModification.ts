@@ -40,6 +40,9 @@ export class UpdateEntityNameModificationHandler implements ModificationHandler<
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
+		if (!entity.migrations.enabled) {
+			return
+		}
 		if (!entity.view && this.options.formatVersion >= VERSION_UPDATE_CONSTRAINT_NAME) {
 			renameConstraintsSqlBuilder(builder, entity, this.getNewConstraintName.bind(this))
 		}

@@ -44,6 +44,9 @@ export class ConvertOneToManyRelationModificationHandler implements Modification
 
 	public createSql(builder: MigrationBuilder): void {
 		const { entity, relation } = this.getRelation()
+		if (!entity.migrations.enabled) {
+			return
+		}
 		const columnName = relation.joiningColumn.columnName
 		const proposedIndexName = NamingHelper.createForeignKeyIndexName(entity.tableName, columnName)
 		const indexName = resolveIndexName(this.schema, proposedIndexName)

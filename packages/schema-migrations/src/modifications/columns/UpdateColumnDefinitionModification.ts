@@ -13,7 +13,7 @@ export class UpdateColumnDefinitionModificationHandler implements ModificationHa
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
-		if (entity.view) {
+		if (entity.view || !entity.migrations.enabled) {
 			return
 		}
 		const oldColumn = entity.fields[this.data.fieldName] as Model.AnyColumn

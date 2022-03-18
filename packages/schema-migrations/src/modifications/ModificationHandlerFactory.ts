@@ -83,6 +83,7 @@ namespace ModificationHandlerFactory {
 		toggleEventLogModification,
 		toggleJunctionEventLogModification,
 		convertOneHasManyToManyHasManyRelationModification,
+		ConfigureEntityDatabaseMigrationsModification,
 	]
 
 	export const defaultFactoryMap: HandlerMap<any> = Object.fromEntries(handlers.map(it => [it.id, it]))
