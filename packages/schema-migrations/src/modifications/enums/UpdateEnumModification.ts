@@ -22,14 +22,14 @@ export class UpdateEnumModificationHandler implements ModificationHandler<Update
 			...model,
 			enums: {
 				...model.enums,
-				[this.data.enumName]: this.data.values,
+				[this.data.enumName]: { values: this.data.values },
 			},
 		}))
 	}
 
 	describe() {
-		const currentValues = this.schema.model.enums[this.data.enumName]
-		const missingValues = currentValues.filter(it => !this.data.values.includes(it))
+		const currentEnum = this.schema.model.enums[this.data.enumName]
+		const missingValues = currentEnum.values.filter(it => !this.data.values.includes(it))
 		const failureWarning =
 			missingValues.length > 0
 				? `Removing values (${missingValues.join(', ')}) from enum, this may fail in runtime`
@@ -54,8 +54,8 @@ export class UpdateEnumDiffer implements Differ {
 			.filter(
 				([name]) =>
 					originalSchema.model.enums[name] &&
-					!deepEqual(updatedSchema.model.enums[name], originalSchema.model.enums[name]),
+					!deepEqual(updatedSchema.model.enums[name].values, originalSchema.model.enums[name].values),
 			)
-			.map(([enumName, values]) => updateEnumModification.createModification({ enumName, values }))
+			.map(([enumName, enum_]) => updateEnumModification.createModification({ enumName, values: enum_.values }))
 	}
 }

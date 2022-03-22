@@ -19,7 +19,7 @@ export class CreateEnumModificationHandler implements ModificationHandler<Create
 			...model,
 			enums: {
 				...model.enums,
-				[this.data.enumName]: this.data.values,
+				[this.data.enumName]: { values: this.data.values },
 			},
 		}))
 	}
@@ -43,9 +43,9 @@ export class CreateEnumDiffer implements Differ {
 	createDiff(originalSchema: Schema, updatedSchema: Schema) {
 		return Object.entries(updatedSchema.model.enums)
 			.filter(([name]) => !originalSchema.model.enums[name])
-			.map(([enumName, values]) => createEnumModification.createModification({
+			.map(([enumName, enum_]) => createEnumModification.createModification({
 				enumName,
-				values,
+				values: enum_.values,
 			}))
 	}
 }
