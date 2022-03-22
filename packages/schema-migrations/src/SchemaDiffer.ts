@@ -67,6 +67,8 @@ export class SchemaDiffer {
 		}
 
 		const differs: Differ[] = [
+			ConfigureEntityDatabaseMigrationsModification.createDiff,
+			ConfigureEnumDatabaseMigrationsModification.createDiff,
 			new UpdateSettingsDiffer(),
 			new ConvertOneToManyRelationDiffer(),
 			new ConvertOneHasManyToManyHasManyRelationDiffer(),

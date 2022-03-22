@@ -9,6 +9,10 @@ export class UpdateEnumModificationHandler implements ModificationHandler<Update
 	constructor(private readonly data: UpdateEnumModificationData, private readonly schema: Schema) {}
 
 	public createSql(builder: MigrationBuilder): void {
+		const enum_ = this.schema.model.enums[this.data.enumName]
+		if (!enum_.migrations.enabled) {
+			return
+		}
 		builder.sql(`
 			ALTER DOMAIN "${this.data.enumName}"
 			DROP CONSTRAINT ${getConstraintName(this.data.enumName)}`)
@@ -22,7 +26,10 @@ export class UpdateEnumModificationHandler implements ModificationHandler<Update
 			...model,
 			enums: {
 				...model.enums,
-				[this.data.enumName]: { values: this.data.values },
+				[this.data.enumName]: {
+					...model.enums[this.data.enumName],
+					values: this.data.values,
+				},
 			},
 		}))
 	}
