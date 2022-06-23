@@ -1,6 +1,5 @@
 import { graphql, printSchema } from 'graphql'
 import { Acl, Model } from '@contember/schema'
-import * as path from 'path'
 
 import {
 	AllowAllPermissionFactory,
@@ -10,14 +9,11 @@ import {
 } from '@contember/schema-definition'
 import { Authorizator, GraphQlSchemaBuilderFactory } from '../../../../src/index.js'
 import * as model from './model.js'
-import { promises as fs } from 'fs'
-import { assert, describe, it } from 'vitest'
-import { fileURLToPath } from 'url'
+import { assert, describe, expect, it } from 'vitest'
 
 interface Test {
 	schema: (builder: SchemaBuilder) => SchemaBuilder | Model.Schema
 	permissions: (schema: Model.Schema) => Acl.Permissions
-	graphQlSchemaFile: string
 }
 
 const testSchema = async (test: Test) => {
@@ -44,25 +40,12 @@ const testSchema = async (test: Test) => {
 	const errors = (result.errors || []).map(it => it.message)
 	assert.deepEqual(errors, [])
 
-	const textSchema = printSchema(graphQlSchema) + '\n'
-
-	const filename = path.join(path.dirname(fileURLToPath(import.meta.url)), test.graphQlSchemaFile)
-	let expectedSchema: string
-	try {
-		expectedSchema = await fs.readFile(filename, { encoding: 'utf8' })
-	} catch (e) {
-		await fs.writeFile(filename, textSchema, { encoding: 'utf8' })
-		throw new Error(`Schema file ${filename} not found, creating with current schema`)
-	}
-	if (expectedSchema) {
-		assert.deepEqual(textSchema, expectedSchema)
-	}
+	return printSchema(graphQlSchema) + '\n'
 }
 describe('GraphQL schema builder', () => {
 
-
 	it('basic schema', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder
 					.entity('Author', e =>
@@ -80,12 +63,12 @@ describe('GraphQL schema builder', () => {
 							.manyHasMany('categories', r => r.target('Category').inversedBy('posts')),
 					),
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-basic.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('restricted access to fields by permissions', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder.entity('Test', e =>
 					e
@@ -112,13 +95,13 @@ describe('GraphQL schema builder', () => {
 					},
 				},
 			}),
-			graphQlSchemaFile: 'schema-acl.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 
 	it('conditionally restricted read of some fields', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder.entity('Test', e =>
 					e
@@ -139,13 +122,13 @@ describe('GraphQL schema builder', () => {
 					},
 				},
 			}),
-			graphQlSchemaFile: 'schema-acl-predicate.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 
 	it('conditionally restricted read of whole row', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder.entity('Test', e =>
 					e
@@ -166,8 +149,8 @@ describe('GraphQL schema builder', () => {
 					},
 				},
 			}),
-			graphQlSchemaFile: 'schema-acl-predicate2.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	const oneHasManySchema = (builder: SchemaBuilder) =>
@@ -180,15 +163,15 @@ describe('GraphQL schema builder', () => {
 		)
 
 	it('ACL with relations - everything allowed', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: oneHasManySchema,
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-acl-allowed.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('ACL with relations - restricted delete', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: oneHasManySchema,
 			permissions: () => ({
 				Root: {
@@ -209,12 +192,12 @@ describe('GraphQL schema builder', () => {
 					},
 				},
 			}),
-			graphQlSchemaFile: 'schema-acl-restricted-delete.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('ACL with relations - restricted update', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: oneHasManySchema,
 			permissions: () => ({
 				Root: {
@@ -235,12 +218,12 @@ describe('GraphQL schema builder', () => {
 					},
 				},
 			}),
-			graphQlSchemaFile: 'schema-acl-restricted-update.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('ACL with relations - restricted create', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: oneHasManySchema,
 			permissions: () => ({
 				Root: {
@@ -260,12 +243,12 @@ describe('GraphQL schema builder', () => {
 					},
 				},
 			}),
-			graphQlSchemaFile: 'schema-acl-restricted-create.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('has many relation reduction', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder.entity('Post', e =>
 					e
@@ -280,12 +263,12 @@ describe('GraphQL schema builder', () => {
 						),
 				),
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-has-many-reduction.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('bug with multiple relations 66', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder
 					.enum('one', ['one'])
@@ -297,8 +280,8 @@ describe('GraphQL schema builder', () => {
 							.oneHasMany('inHouseVideos', relation => relation.target('Video').ownedBy('frontPage')),
 					),
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-bug-66.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('basic schema with new builder', async () => {
@@ -307,24 +290,23 @@ describe('GraphQL schema builder', () => {
 		assert.deepEqual((relation as Model.OneHasManyRelation).orderBy, [
 			{ path: ['publishedAt'], direction: Model.OrderDirection.desc },
 		])
-		await testSchema({
+		const schema = await testSchema({
 			schema: () => schema1,
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-new-builder.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('allow only create', async () => {
-		const schema = SchemaDefinition.createModel(model)
-		await testSchema({
-			schema: () => schema,
+		const schema = await testSchema({
+			schema: () => SchemaDefinition.createModel(model),
 			permissions: schema => new AllowAllPermissionFactory([Acl.Operation.create]).create(schema),
-			graphQlSchemaFile: 'schema-acl-create-only.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('custom primary allowed', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder
 					.entity('Author', e =>
@@ -342,26 +324,27 @@ describe('GraphQL schema builder', () => {
 							.manyHasMany('categories', r => r.target('Category').inversedBy('posts')),
 					),
 			permissions: schema => new AllowAllPermissionFactory().create(schema, true),
-			graphQlSchemaFile: 'schema-custom-primary.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 	it('aliased type', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: builder =>
 				builder.entity('Author', e => e.column('name', c => c.type(Model.ColumnType.String).typeAlias('AuthorName'))),
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-aliased-type.gql',
 		})
+		expect(schema).matchSnapshot()
 	})
 
 
 	it('view entity', async () => {
-		await testSchema({
+		const schema = await testSchema({
 			schema: () => SchemaDefinition.createModel(ViewEntity),
 			permissions: schema => new AllowAllPermissionFactory().create(schema),
-			graphQlSchemaFile: 'schema-view-entity.gql',
 		})
+
+		expect(schema).matchSnapshot()
 	})
 })
 
