@@ -221,6 +221,7 @@ export namespace Model {
 	export interface ColumnContext {
 		entity: Model.Entity
 		column: Model.AnyColumn
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 	export type AnyHasManyRelationContext =
@@ -247,6 +248,7 @@ export namespace Model {
 		relation: Model.ManyHasManyInverseRelation
 		targetEntity: Model.Entity
 		targetRelation: Model.ManyHasManyOwningRelation
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 	export interface ManyHasManyOwningContext {
@@ -255,6 +257,7 @@ export namespace Model {
 		relation: Model.ManyHasManyOwningRelation
 		targetEntity: Model.Entity
 		targetRelation: Model.ManyHasManyInverseRelation | null
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 	export interface ManyHasOneContext {
@@ -263,6 +266,7 @@ export namespace Model {
 		relation: Model.ManyHasOneRelation
 		targetEntity: Model.Entity
 		targetRelation: Model.OneHasManyRelation | null
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 	export interface OneHasManyContext {
@@ -271,6 +275,7 @@ export namespace Model {
 		relation: Model.OneHasManyRelation
 		targetEntity: Model.Entity
 		targetRelation: Model.ManyHasOneRelation
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 	export interface OneHasOneInverseContext {
@@ -279,6 +284,7 @@ export namespace Model {
 		relation: Model.OneHasOneInverseRelation
 		targetEntity: Model.Entity
 		targetRelation: Model.OneHasOneOwningRelation
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 	export interface OneHasOneOwningContext {
@@ -287,6 +293,7 @@ export namespace Model {
 		relation: Model.OneHasOneOwningRelation
 		targetEntity: Model.Entity
 		targetRelation: Model.OneHasOneInverseRelation | null
+		accept: <T>(visitor: ExpandedFieldVisitor<T>) => T
 	}
 
 
@@ -297,6 +304,10 @@ export namespace Model {
 	export interface RelationVisitor<T> {
 		visitRelation(context: AnyRelationContext): T
 	}
+
+	export type ExpandedFieldVisitor<T> =
+		& ColumnVisitor<T>
+		& RelationByTypeVisitor<T>
 
 	export type FieldVisitor<T> =
 		& ColumnVisitor<T>
