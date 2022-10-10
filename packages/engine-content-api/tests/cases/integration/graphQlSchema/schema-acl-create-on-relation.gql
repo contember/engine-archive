@@ -1,0 +1,194 @@
+type Query {
+  validateCreateComment(data: CommentCreateInput!): _ValidationResult!
+  getPost(by: PostUniqueWhere!, filter: PostWhere): Post
+  listPost(filter: PostWhere, orderBy: [PostOrderBy!], offset: Int, limit: Int): [Post!]!
+  paginatePost(filter: PostWhere, orderBy: [PostOrderBy!], skip: Int, first: Int): PostConnection!
+  validateUpdatePost(by: PostUniqueWhere!, data: PostUpdateInput!): _ValidationResult!
+  transaction: QueryTransaction
+  _info: Info
+}
+
+type _ValidationResult {
+  valid: Boolean!
+  errors: [_ValidationError!]!
+}
+
+type _ValidationError {
+  path: [_PathFragment!]!
+  message: _ValidationMessage!
+}
+
+union _PathFragment = _FieldPathFragment | _IndexPathFragment
+
+type _FieldPathFragment {
+  field: String!
+}
+
+type _IndexPathFragment {
+  index: Int!
+  alias: String
+}
+
+type _ValidationMessage {
+  text: String!
+}
+
+input CommentCreateInput {
+  content: String
+  _dummy_field_: Boolean
+}
+
+type Post {
+  _meta: PostMeta
+  id: UUID!
+}
+
+type PostMeta {
+  id: FieldMeta
+}
+
+type FieldMeta {
+  readable: Boolean
+  updatable: Boolean
+}
+
+scalar UUID
+
+input PostUniqueWhere {
+  id: UUID
+}
+
+input PostWhere {
+  id: UUIDCondition
+  and: [PostWhere]
+  or: [PostWhere]
+  not: PostWhere
+}
+
+input UUIDCondition {
+  and: [UUIDCondition!]
+  or: [UUIDCondition!]
+  not: UUIDCondition
+  null: Boolean
+  isNull: Boolean
+  eq: UUID
+  notEq: UUID
+  in: [UUID!]
+  notIn: [UUID!]
+  lt: UUID
+  lte: UUID
+  gt: UUID
+  gte: UUID
+}
+
+input PostOrderBy {
+  _random: Boolean
+  _randomSeeded: Int
+  id: OrderDirection
+}
+
+enum OrderDirection {
+  asc
+  desc
+  ascNullsFirst
+  descNullsLast
+}
+
+type PostConnection {
+  pageInfo: PageInfo!
+  edges: [PostEdge!]!
+}
+
+type PageInfo {
+  totalCount: Int!
+}
+
+type PostEdge {
+  node: Post!
+}
+
+input PostUpdateInput {
+  comments: [PostUpdateCommentsEntityRelationInput!]
+  _dummy_field_: Boolean
+}
+
+input PostUpdateCommentsEntityRelationInput {
+  create: CommentWithoutPostCreateInput
+  alias: String
+}
+
+input CommentWithoutPostCreateInput {
+  content: String
+  _dummy_field_: Boolean
+}
+
+type QueryTransaction {
+  validateCreateComment(data: CommentCreateInput!): _ValidationResult!
+  getPost(by: PostUniqueWhere!, filter: PostWhere): Post
+  listPost(filter: PostWhere, orderBy: [PostOrderBy!], offset: Int, limit: Int): [Post!]!
+  paginatePost(filter: PostWhere, orderBy: [PostOrderBy!], skip: Int, first: Int): PostConnection!
+  validateUpdatePost(by: PostUniqueWhere!, data: PostUpdateInput!): _ValidationResult!
+}
+
+type Info {
+  description: String
+}
+
+type Mutation {
+  createComment(data: CommentCreateInput!): CommentCreateResult!
+  updatePost(by: PostUniqueWhere!, filter: PostWhere, data: PostUpdateInput!): PostUpdateResult!
+  transaction(options: MutationTransactionOptions): MutationTransaction!
+  query: Query!
+}
+
+type CommentCreateResult implements MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  validation: _ValidationResult!
+}
+
+interface MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+}
+
+type _MutationError {
+  path: [_PathFragment!]! @deprecated(reason: "Use `paths`.")
+  paths: [[_PathFragment!]!]!
+  type: _MutationErrorType!
+  message: String
+}
+
+enum _MutationErrorType {
+  NotNullConstraintViolation
+  UniqueConstraintViolation
+  ForeignKeyConstraintViolation
+  NotFoundOrDenied
+  NonUniqueWhereInput
+  InvalidDataInput
+  SqlError
+}
+
+type PostUpdateResult implements MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  node: Post
+  validation: _ValidationResult!
+}
+
+type MutationTransaction {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  validation: _ValidationResult!
+  createComment(data: CommentCreateInput!): CommentCreateResult!
+  updatePost(by: PostUniqueWhere!, filter: PostWhere, data: PostUpdateInput!): PostUpdateResult!
+  query: Query
+}
+
+input MutationTransactionOptions {
+  deferForeignKeyConstraints: Boolean
+}

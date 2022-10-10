@@ -1,5 +1,6 @@
 import { Acl, Input, Model } from '@contember/schema'
 import { Authorizator } from '../../acl'
+import { isOwningRelation } from '@contember/schema-utils'
 
 export class UpdateEntityRelationAllowedOperationsVisitor implements
 	Model.ColumnVisitor<never>,
@@ -11,20 +12,21 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 		throw new Error('UpdateEntityRelationAllowedOperationsVisitor: Not applicable for a column')
 	}
 
-	public visitManyHasManyInverse({ targetEntity, targetRelation }: Model.ManyHasManyInverseContext) {
-		return this.getAllowedOperations(targetEntity, targetEntity, targetRelation)
+	public visitManyHasManyInverse(ctx: Model.ManyHasManyInverseContext) {
+		return this.getAllowedOperations(ctx)
 	}
 
-	public visitManyHasManyOwning({ entity, targetEntity, relation }: Model.ManyHasManyOwningContext) {
-		return this.getAllowedOperations(targetEntity, entity, relation)
+	public visitManyHasManyOwning(ctx: Model.ManyHasManyOwningContext) {
+		return this.getAllowedOperations(ctx)
 	}
 
-	public visitOneHasMany({ targetRelation, targetEntity }: Model.OneHasManyContext) {
-		return this.getAllowedOperations(targetEntity, targetEntity, targetRelation)
+	public visitOneHasMany(ctx: Model.OneHasManyContext) {
+		return this.getAllowedOperations(ctx)
 	}
 
-	public visitManyHasOne({ targetEntity, relation, entity }: Model.ManyHasOneContext) {
-		const operations = this.getAllowedOperations(targetEntity, entity, relation)
+	public visitManyHasOne(ctx: Model.ManyHasOneContext) {
+		const operations = this.getAllowedOperations(ctx)
+		const { relation } = ctx
 		if (relation.nullable) {
 			return operations
 		}
@@ -35,16 +37,18 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 		return operations.filter(it => !forbiddenOperations.includes(it))
 	}
 
-	public visitOneHasOneInverse({ relation, targetEntity, targetRelation }: Model.OneHasOneInverseContext) {
-		const operations = this.getAllowedOperations(targetEntity, targetEntity, targetRelation)
+	public visitOneHasOneInverse(ctx: Model.OneHasOneInverseContext) {
+		const operations = this.getAllowedOperations(ctx)
+		const { relation, targetRelation } = ctx
 		if (relation.nullable || targetRelation.nullable) {
 			return operations
 		}
 		return operations.filter(it => it === Input.UpdateRelationOperation.update)
 	}
 
-	public visitOneHasOneOwning({ targetEntity, entity, relation, targetRelation }: Model.OneHasOneOwningContext) {
-		const operations = this.getAllowedOperations(targetEntity, entity, relation)
+	public visitOneHasOneOwning(ctx: Model.OneHasOneOwningContext) {
+		const operations = this.getAllowedOperations(ctx)
+		const { relation, targetRelation } = ctx
 		if (relation.nullable || !targetRelation || targetRelation.nullable) {
 			return operations
 		}
@@ -56,11 +60,15 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 	}
 
 	private getAllowedOperations(
-		targetEntity: Model.Entity,
-		owningEntity: Model.Entity,
-		owningRelation: Model.Relation,
+		ctx: Model.AnyRelationContext,
 	): Input.UpdateRelationOperation[] {
 		const result: Input.UpdateRelationOperation[] = []
+		const { relation, entity, targetEntity, targetRelation } = ctx
+
+		const [owningEntity, owningRelation] = isOwningRelation(relation) ? [entity, relation] : [targetEntity, targetRelation]
+		if (!owningRelation) {
+			throw new Error()
+		}
 
 		const canReadTargetEntity = this.authorizator.getEntityPermission(Acl.Operation.read, targetEntity.name) !== 'no'
 		const canCreateTargetEntity = this.authorizator.getEntityPermission(Acl.Operation.create, targetEntity.name) !== 'no'
@@ -73,13 +81,15 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 			result.push(Input.UpdateRelationOperation.disconnect)
 		}
 
-		if (canCreateTargetEntity && canUpdateOwningRelation) {
+		if (canCreateTargetEntity) {
 			result.push(Input.UpdateRelationOperation.create)
 		}
-		if (canUpdateTargetEntity && canUpdateOwningRelation) {
+
+		if (canUpdateTargetEntity) {
 			result.push(Input.UpdateRelationOperation.update)
 		}
-		if (canCreateTargetEntity && canUpdateTargetEntity && canUpdateOwningRelation) {
+
+		if (canCreateTargetEntity && canUpdateTargetEntity) {
 			result.push(Input.UpdateRelationOperation.upsert)
 		}
 		if (canDeleteTargetEntity && canUpdateOwningRelation) {

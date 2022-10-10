@@ -208,7 +208,13 @@ input OneHasManyEntityWithoutR2CreateInput {
 }
 
 input RootUpdateInput {
+  r: [RootUpdateREntityRelationInput!]
   _dummy_field_: Boolean
+}
+
+input RootUpdateREntityRelationInput {
+  create: OneHasManyEntityWithoutR2CreateInput
+  alias: String
 }
 
 type QueryTransaction {

@@ -1,0 +1,290 @@
+type Query {
+  getComment(by: CommentUniqueWhere!, filter: CommentWhere): Comment
+  listComment(filter: CommentWhere, orderBy: [CommentOrderBy!], offset: Int, limit: Int): [Comment!]!
+  paginateComment(filter: CommentWhere, orderBy: [CommentOrderBy!], skip: Int, first: Int): CommentConnection!
+  validateCreateComment(data: CommentCreateInput!): _ValidationResult!
+  validateUpdateComment(by: CommentUniqueWhere!, data: CommentUpdateInput!): _ValidationResult!
+  getPost(by: PostUniqueWhere!, filter: PostWhere): Post
+  listPost(filter: PostWhere, orderBy: [PostOrderBy!], offset: Int, limit: Int): [Post!]!
+  paginatePost(filter: PostWhere, orderBy: [PostOrderBy!], skip: Int, first: Int): PostConnection!
+  validateUpdatePost(by: PostUniqueWhere!, data: PostUpdateInput!): _ValidationResult!
+  transaction: QueryTransaction
+  _info: Info
+}
+
+type Comment {
+  _meta: CommentMeta
+  id: UUID!
+  Post(filter: PostWhere): Post
+}
+
+type CommentMeta {
+  id: FieldMeta
+  Post: FieldMeta
+}
+
+type FieldMeta {
+  readable: Boolean
+  updatable: Boolean
+}
+
+scalar UUID
+
+type Post {
+  _meta: PostMeta
+  id: UUID!
+  comments(filter: CommentWhere, orderBy: [CommentOrderBy!], offset: Int, limit: Int): [Comment!]!
+  paginateComments(filter: CommentWhere, orderBy: [CommentOrderBy!], skip: Int, first: Int): CommentConnection!
+}
+
+type PostMeta {
+  id: FieldMeta
+  comments: FieldMeta
+}
+
+input CommentWhere {
+  id: UUIDCondition
+  Post: PostWhere
+  and: [CommentWhere]
+  or: [CommentWhere]
+  not: CommentWhere
+}
+
+input UUIDCondition {
+  and: [UUIDCondition!]
+  or: [UUIDCondition!]
+  not: UUIDCondition
+  null: Boolean
+  isNull: Boolean
+  eq: UUID
+  notEq: UUID
+  in: [UUID!]
+  notIn: [UUID!]
+  lt: UUID
+  lte: UUID
+  gt: UUID
+  gte: UUID
+}
+
+input PostWhere {
+  id: UUIDCondition
+  comments: CommentWhere
+  and: [PostWhere]
+  or: [PostWhere]
+  not: PostWhere
+}
+
+input CommentOrderBy {
+  _random: Boolean
+  _randomSeeded: Int
+  id: OrderDirection
+  Post: PostOrderBy
+}
+
+enum OrderDirection {
+  asc
+  desc
+  ascNullsFirst
+  descNullsLast
+}
+
+input PostOrderBy {
+  _random: Boolean
+  _randomSeeded: Int
+  id: OrderDirection
+}
+
+type CommentConnection {
+  pageInfo: PageInfo!
+  edges: [CommentEdge!]!
+}
+
+type PageInfo {
+  totalCount: Int!
+}
+
+type CommentEdge {
+  node: Comment!
+}
+
+input CommentUniqueWhere {
+  id: UUID
+}
+
+type _ValidationResult {
+  valid: Boolean!
+  errors: [_ValidationError!]!
+}
+
+type _ValidationError {
+  path: [_PathFragment!]!
+  message: _ValidationMessage!
+}
+
+union _PathFragment = _FieldPathFragment | _IndexPathFragment
+
+type _FieldPathFragment {
+  field: String!
+}
+
+type _IndexPathFragment {
+  index: Int!
+  alias: String
+}
+
+type _ValidationMessage {
+  text: String!
+}
+
+input CommentCreateInput {
+  content: String
+  _dummy_field_: Boolean
+}
+
+input CommentUpdateInput {
+  content: String
+  _dummy_field_: Boolean
+}
+
+input PostUniqueWhere {
+  id: UUID
+  comments: CommentUniqueWhere
+}
+
+type PostConnection {
+  pageInfo: PageInfo!
+  edges: [PostEdge!]!
+}
+
+type PostEdge {
+  node: Post!
+}
+
+input PostUpdateInput {
+  comments: [PostUpdateCommentsEntityRelationInput!]
+  _dummy_field_: Boolean
+}
+
+input PostUpdateCommentsEntityRelationInput {
+  create: CommentWithoutPostCreateInput
+  update: PostUpdateCommentsRelationInput
+  upsert: PostUpsertCommentsRelationInput
+  alias: String
+}
+
+input CommentWithoutPostCreateInput {
+  content: String
+  _dummy_field_: Boolean
+}
+
+input PostUpdateCommentsRelationInput {
+  by: CommentUniqueWhere
+  data: CommentWithoutPostUpdateInput
+}
+
+input CommentWithoutPostUpdateInput {
+  content: String
+  _dummy_field_: Boolean
+}
+
+input PostUpsertCommentsRelationInput {
+  by: CommentUniqueWhere
+  update: CommentWithoutPostUpdateInput
+  create: CommentWithoutPostCreateInput
+}
+
+type QueryTransaction {
+  getComment(by: CommentUniqueWhere!, filter: CommentWhere): Comment
+  listComment(filter: CommentWhere, orderBy: [CommentOrderBy!], offset: Int, limit: Int): [Comment!]!
+  paginateComment(filter: CommentWhere, orderBy: [CommentOrderBy!], skip: Int, first: Int): CommentConnection!
+  validateCreateComment(data: CommentCreateInput!): _ValidationResult!
+  validateUpdateComment(by: CommentUniqueWhere!, data: CommentUpdateInput!): _ValidationResult!
+  getPost(by: PostUniqueWhere!, filter: PostWhere): Post
+  listPost(filter: PostWhere, orderBy: [PostOrderBy!], offset: Int, limit: Int): [Post!]!
+  paginatePost(filter: PostWhere, orderBy: [PostOrderBy!], skip: Int, first: Int): PostConnection!
+  validateUpdatePost(by: PostUniqueWhere!, data: PostUpdateInput!): _ValidationResult!
+}
+
+type Info {
+  description: String
+}
+
+type Mutation {
+  createComment(data: CommentCreateInput!): CommentCreateResult!
+  updateComment(by: CommentUniqueWhere!, filter: CommentWhere, data: CommentUpdateInput!): CommentUpdateResult!
+  upsertComment(by: CommentUniqueWhere!, filter: CommentWhere, update: CommentUpdateInput!, create: CommentCreateInput!): CommentUpsertResult!
+  updatePost(by: PostUniqueWhere!, filter: PostWhere, data: PostUpdateInput!): PostUpdateResult!
+  transaction(options: MutationTransactionOptions): MutationTransaction!
+  query: Query!
+}
+
+type CommentCreateResult implements MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  node: Comment
+  validation: _ValidationResult!
+}
+
+interface MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+}
+
+type _MutationError {
+  path: [_PathFragment!]! @deprecated(reason: "Use `paths`.")
+  paths: [[_PathFragment!]!]!
+  type: _MutationErrorType!
+  message: String
+}
+
+enum _MutationErrorType {
+  NotNullConstraintViolation
+  UniqueConstraintViolation
+  ForeignKeyConstraintViolation
+  NotFoundOrDenied
+  NonUniqueWhereInput
+  InvalidDataInput
+  SqlError
+}
+
+type CommentUpdateResult implements MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  node: Comment
+  validation: _ValidationResult!
+}
+
+type CommentUpsertResult implements MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  node: Comment
+  validation: _ValidationResult!
+}
+
+type PostUpdateResult implements MutationResult {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  node: Post
+  validation: _ValidationResult!
+}
+
+type MutationTransaction {
+  ok: Boolean!
+  errorMessage: String
+  errors: [_MutationError!]!
+  validation: _ValidationResult!
+  createComment(data: CommentCreateInput!): CommentCreateResult!
+  updateComment(by: CommentUniqueWhere!, filter: CommentWhere, data: CommentUpdateInput!): CommentUpdateResult!
+  upsertComment(by: CommentUniqueWhere!, filter: CommentWhere, update: CommentUpdateInput!, create: CommentCreateInput!): CommentUpsertResult!
+  updatePost(by: PostUniqueWhere!, filter: PostWhere, data: PostUpdateInput!): PostUpdateResult!
+  query: Query
+}
+
+input MutationTransactionOptions {
+  deferForeignKeyConstraints: Boolean
+}

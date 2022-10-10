@@ -263,6 +263,121 @@ describe('GraphQL schema builder', () => {
 		})
 	})
 
+	it('acl - create on relation', async () => {
+		await testSchema({
+			schema: builder =>
+				builder.entity('Post', e =>
+					e
+						.oneHasMany('comments', r => r.target('Comment', e => e.column('content'))),
+				),
+			permissions: () => ({
+				Post: {
+					predicates: {},
+					operations: {
+						read: {
+							id: true,
+						},
+						update: {
+							id: true,
+							comments: true,
+						},
+					},
+				},
+				Comment: {
+					predicates: {},
+					operations: {
+						create: {
+							id: true,
+							content: true,
+						},
+					},
+				},
+			}),
+			graphQlSchemaFile: 'schema-acl-create-on-relation.gql',
+		})
+	})
+
+	it('acl - update on relation', async () => {
+		await testSchema({
+			schema: builder =>
+				builder.entity('Post', e =>
+					e
+						.oneHasMany('comments', r => r.target('Comment', e => e.column('content'))),
+				),
+			permissions: () => ({
+				Post: {
+					predicates: {},
+					operations: {
+						read: {
+							id: true,
+						},
+						update: {
+							id: true,
+							comments: true,
+						},
+					},
+				},
+				Comment: {
+					predicates: {},
+					operations: {
+						read: {
+							id: true,
+						},
+
+						update: {
+							id: true,
+							content: true,
+						},
+					},
+				},
+			}),
+			graphQlSchemaFile: 'schema-acl-update-on-relation.gql',
+		})
+	})
+
+
+	it('acl - upsert on relation', async () => {
+		await testSchema({
+			schema: builder =>
+				builder.entity('Post', e =>
+					e
+						.oneHasMany('comments', r => r.target('Comment', e => e.column('content'))),
+				),
+			permissions: () => ({
+				Post: {
+					predicates: {},
+					operations: {
+						read: {
+							id: true,
+						},
+						update: {
+							id: true,
+							comments: true,
+						},
+					},
+				},
+				Comment: {
+					predicates: {},
+					operations: {
+						read: {
+							id: true,
+						},
+						create: {
+							id: true,
+							content: true,
+						},
+						update: {
+							id: true,
+							content: true,
+						},
+					},
+				},
+			}),
+			graphQlSchemaFile: 'schema-acl-upsert-on-relation.gql',
+		})
+	})
+
+
 	it('has many relation reduction', async () => {
 		await testSchema({
 			schema: builder =>
