@@ -99,11 +99,11 @@ export const updateAclEveryEntity =
 			),
 		})
 
-type EntityAclFieldPermissionsUpdater = (
-	fieldPermissions: Acl.FieldPermissions,
+type EntityAclFieldPermissionsUpdater = <T extends Acl.FieldPermissions>(
+	fieldPermissions: T,
 	entityName: string,
 	operation: Acl.Operation,
-) => Acl.FieldPermissions
+) => T
 type EntityOperationHandler = {
 	[K in keyof Required<Acl.EntityOperations>]: (
 		value: Exclude<Acl.EntityOperations[K], undefined>,
@@ -118,6 +118,7 @@ export const updateAclFieldPermissions =
 				create: value => updater(value, entityName, Acl.Operation.create),
 				update: value => updater(value, entityName, Acl.Operation.update),
 				read: value => updater(value, entityName, Acl.Operation.read),
+				sort: value => updater(value, entityName, Acl.Operation.sort),
 				delete: value => value,
 				customPrimary: value => value,
 			}
@@ -246,7 +247,7 @@ export const removeField = (entityName: string, fieldName: string, version: numb
 								}
 								const { [fieldName]: field, ...other } = permissions
 								return {
-									...other,
+									...other as typeof permissions,
 								}
 							}),
 							updateAclEveryPredicate(({ predicate, entityName }) => {

@@ -52,4 +52,8 @@ export class Authorizator {
 	isCustomPrimaryAllowed(entity: string): boolean {
 		return this.permissions?.[entity]?.operations?.customPrimary ?? this.defaultCustomPrimary
 	}
+
+	isSortable(entity: string, field: string): boolean {
+		return this.permissions?.[entity]?.operations?.sort?.[field] !== false
+	}
 }

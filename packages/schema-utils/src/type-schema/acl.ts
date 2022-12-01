@@ -93,6 +93,7 @@ const entityOperationsSchema = Typesafe.partial({
 	create: fieldPermissionsSchema,
 	update: fieldPermissionsSchema,
 	delete: Typesafe.union(Typesafe.string, Typesafe.boolean),
+	sort: Typesafe.record(Typesafe.string, Typesafe.boolean),
 	customPrimary: Typesafe.boolean,
 })
 const opSchemaCheck: Typesafe.Equals<Acl.EntityOperations, ReturnType<typeof entityOperationsSchema>> = true

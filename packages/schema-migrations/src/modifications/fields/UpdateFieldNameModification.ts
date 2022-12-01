@@ -139,7 +139,7 @@ export class UpdateFieldNameModificationHandler implements ModificationHandler<U
 								const { [this.data.fieldName]: field, ...other } = permissions
 								return {
 									[this.data.newFieldName]: field,
-									...other,
+									...other as typeof permissions,
 								}
 							}),
 							updateAclEveryPredicate(({ predicate, entityName, schema }) => {

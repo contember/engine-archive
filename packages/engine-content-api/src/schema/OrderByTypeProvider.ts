@@ -44,6 +44,9 @@ export class OrderByTypeProvider {
 			if (!entity.fields.hasOwnProperty(fieldName)) {
 				continue
 			}
+			if (!this.authorizator.isSortable(name, fieldName)) {
+				continue
+			}
 			const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.authorizator)
 			if (!acceptFieldVisitor(this.schema, name, fieldName, accessVisitor)) {
 				continue

@@ -64,6 +64,7 @@ export namespace Acl {
 		create = 'create',
 		update = 'update',
 		delete = 'delete',
+		sort = 'sort',
 	}
 
 	export type EntityOperations = {
@@ -72,9 +73,11 @@ export namespace Acl {
 		readonly customPrimary?: boolean
 		readonly update?: FieldPermissions
 		readonly delete?: Predicate
+		readonly sort?: FieldSimplePermissions
 	}
 
 	export type FieldPermissions = { readonly [field: string]: Predicate }
+	export type FieldSimplePermissions = { readonly [field: string]: boolean }
 
 	export type PredicateReference = string
 	export type Predicate = PredicateReference | boolean
