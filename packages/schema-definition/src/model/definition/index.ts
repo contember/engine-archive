@@ -1,9 +1,8 @@
-import { EntityConstructor, Interface } from './types'
+import { Interface } from './types'
 import { Model } from '@contember/schema'
 import { EnumDefinition } from './EnumDefinition'
 import { SchemaBuilder } from './internal'
 import { DefaultNamingConventions } from './NamingConventions'
-import 'reflect-metadata'
 import { FieldDefinition } from './fieldDefinitions'
 import { isEntityConstructor } from '../../utils'
 

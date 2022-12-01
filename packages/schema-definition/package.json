@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "@contember/schema": "^1.2.0-alpha.18",
-    "@contember/schema-utils": "^1.2.0-alpha.18",
-    "reflect-metadata": "^0.1.13"
+    "@contember/schema-utils": "^1.2.0-alpha.18"
   },
   "devDependencies": {}
 }

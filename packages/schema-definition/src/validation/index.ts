@@ -1,6 +1,4 @@
-import { tuple } from '../utils'
-import { SchemaDefinition } from '../model'
-import 'reflect-metadata'
+import { createMetadataStore, tuple } from '../utils'
 import { Validation } from '@contember/schema'
 import { filterEntityDefinition } from '../utils'
 
@@ -29,23 +27,11 @@ const ArgumentFactory = {
 	literal: <V = any>(value: V): Validation.LiteralArgument<V> => ({ type: Validation.ArgumentType.literal, value }),
 }
 
-const RuleMetaKey = Symbol('Rule')
 
-function updateMetadata<T>(
-	{ key, target, propertyKey }: { key: symbol; target: any; propertyKey: string | symbol },
-	generator: (previous: T) => T,
-	initialValue: T,
-) {
-	const metadata = Reflect.hasMetadata(key, target, propertyKey)
-		? Reflect.getMetadata(key, target, propertyKey)
-		: initialValue
-
-	const newMetadata = generator(metadata)
-	Reflect.defineMetadata(key, newMetadata, target, propertyKey)
-}
+const ruleMetadataStore = createMetadataStore<Validation.ValidationRule[]>([])
 
 function addRuleToMetadata(target: any, propertyKey: string | symbol, ...rule: Validation.ValidationRule[]) {
-	updateMetadata<Validation.ValidationRule[]>({ key: RuleMetaKey, target, propertyKey }, prev => [...rule, ...prev], [])
+	ruleMetadataStore.update(prev => [...rule, ...prev], target, propertyKey)
 }
 
 export function fluent() {
@@ -208,7 +194,7 @@ export function parseDefinition(
 				name,
 				fields
 					.map(field => {
-						const fieldRules: Validation.ValidationRule[] | undefined = Reflect.getMetadata(RuleMetaKey, target, field)
+						const fieldRules: Validation.ValidationRule[] | undefined = ruleMetadataStore.get(target, field)
 						if (fieldRules === undefined) {
 							return tuple(field, [])
 						}

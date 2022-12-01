@@ -5,9 +5,10 @@ import { DecoratorFunction, EntityConstructor } from '../../model/definition/typ
 export const allowCustomPrimary = (role?: Role | Role[]): DecoratorFunction<any> => {
 	return (entity: EntityConstructor) => {
 		if (!role) {
-			allowCustomPrimaryAllRolesStore.update(entity, () => true)
+			allowCustomPrimaryAllRolesStore.update(() => true, entity)
 		} else {
-			allowCustomPrimaryStore.update(entity, val => [...val, ...(Array.isArray(role) ? role : [role])])
+			const roleArr = Array.isArray(role) ? role : [role]
+			allowCustomPrimaryStore.update(val => [...val, ...roleArr], entity)
 		}
 	}
 }

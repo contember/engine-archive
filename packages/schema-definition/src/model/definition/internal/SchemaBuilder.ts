@@ -1,6 +1,5 @@
 import { Model, Writable } from '@contember/schema'
 import { NamingHelper } from '@contember/schema-utils'
-import 'reflect-metadata'
 import { tuple } from '../../../utils'
 import { EntityConstructor, FieldsDefinition } from '../types'
 import { NamingConventions } from '../NamingConventions'
