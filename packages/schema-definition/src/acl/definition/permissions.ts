@@ -24,6 +24,3 @@ export const allow = <E, R extends Role<string>>(role: R | R[], args: AllowDefin
 		})
 	}
 }
-
-
-
