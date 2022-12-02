@@ -1,9 +1,7 @@
 import { createMetadataStore } from '../../../utils'
-import { Role } from '../roles'
+import { Role, RolesReference } from '../roles'
 import { AllowDefinition } from '../permissions'
-
-export const allowCustomPrimaryStore = createMetadataStore<Role[]>([])
-export const allowCustomPrimaryAllRolesStore = createMetadataStore<boolean>(false)
+import { EntityPermissionsExtension } from '../extendEntityPermissions'
 
 export type EntityPermissionsDefinition =
 	& AllowDefinition<any>
@@ -11,3 +9,8 @@ export type EntityPermissionsDefinition =
 		role: Role<string>
 	}
 export const allowDefinitionsStore = createMetadataStore<EntityPermissionsDefinition[]>([])
+
+export const entityPermissionsExtensionStore = createMetadataStore<{
+	roles: RolesReference
+	extension: EntityPermissionsExtension
+}[]>([])

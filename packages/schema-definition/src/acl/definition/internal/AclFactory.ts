@@ -3,15 +3,11 @@ import { getEntity } from '@contember/schema-utils'
 
 import { EntityPredicatesResolver } from './EntityPredicateResolver'
 import { AllowDefinition } from '../permissions'
-import {
-	allowCustomPrimaryAllRolesStore,
-	allowCustomPrimaryStore,
-	allowDefinitionsStore,
-	EntityPermissionsDefinition,
-} from './stores'
-import { Role } from '../roles'
-import {  VariableDefinition } from '../variables'
+import { allowDefinitionsStore, EntityPermissionsDefinition, entityPermissionsExtensionStore } from './stores'
+import { anyRole, Role } from '../roles'
+import { VariableDefinition } from '../variables'
 import { filterEntityDefinition } from '../../../utils'
+import { EntityConstructor } from '../../../model/definition/types'
 
 export class AclFactory {
 	constructor(
@@ -31,17 +27,53 @@ export class AclFactory {
 		return {
 			roles: Object.fromEntries(roles.map((role): [string, Acl.RolePermissions] => {
 				const rolePermissions = groupedPermissions.get(role)
+				const basePermissions = this.createPermissions(rolePermissions)
 				return [
 					role.name,
 					{
 						...role.options,
 						stages: role.options.stages ?? '*',
-						entities: this.createPermissions(rolePermissions),
+						entities: this.extendPermissions(role, entityLikeDefinition, basePermissions),
 						variables: this.createVariables(role, variables),
 					},
 				]
 			})),
 		}
+	}
+
+	private extendPermissions(role: Role, entityLikeDefinition: [string, EntityConstructor][], basePermissions: Acl.Permissions): Acl.Permissions {
+		const permissions: [string, Acl.EntityPermissions][] = []
+		for (const [name, constructor] of entityLikeDefinition) {
+			const entity = this.model.entities[name]
+			if (!entity) {
+				continue // probably not an entity
+			}
+
+			const entityPermissions = this.createEntityPermissions(role, constructor, entity, basePermissions[entity.name])
+			if (entityPermissions !== undefined) {
+				permissions.push([name, entityPermissions])
+			}
+		}
+		return Object.fromEntries(permissions)
+	}
+
+	private createEntityPermissions(role: Role, entityConstructor: EntityConstructor, entity: Model.Entity, basePermissions?: Acl.EntityPermissions): Acl.EntityPermissions | undefined {
+		const extensions = entityPermissionsExtensionStore.get(entityConstructor)
+			.filter(({ roles }) => roles === anyRole || roles === role || (Array.isArray(roles) && roles.includes(role)))
+
+		if (extensions.length === 0) {
+			return basePermissions
+		}
+
+		const permissions = basePermissions ?? {
+			operations: {},
+			predicates: {},
+		}
+
+		return extensions.reduce((acc, it) => it.extension({
+			entity,
+			permissions: acc,
+		}), permissions)
 	}
 
 	private createPermissions(rolePermissions: PermissionsByEntity | undefined): Acl.Permissions {
@@ -73,9 +105,6 @@ export class AclFactory {
 			if (delPredicate !== undefined) {
 				entityOperations.delete = delPredicate
 			}
-			if (rolePermissions.get(entityName)?.allowCustomPrimary) {
-				entityOperations.customPrimary = true
-			}
 			return [entityName, {
 				predicates: predicatesResolver.getUsedPredicates(),
 				operations: entityOperations,
@@ -90,14 +119,13 @@ export class AclFactory {
 		}))
 	}
 
-	private static groupPermissions(entityLikeDefinition: [string, { new(): any }][], roles: Role[]): PermissionsByRoleAndEntity {
+	private static groupPermissions(entityLikeDefinition: [string, EntityConstructor][], roles: Role[]): PermissionsByRoleAndEntity {
 		const groupedPermissions: PermissionsByRoleAndEntity = new Map()
 		for (const [name, entity] of entityLikeDefinition) {
 			const initEntityPermissions = (role: Role): EntityPermissions => {
 				const rolePermissions: PermissionsByEntity = groupedPermissions.get(role) ?? new Map()
 				groupedPermissions.set(role, rolePermissions)
 				const entityPermissions = rolePermissions.get(name) ?? {
-					allowCustomPrimary: false,
 					definitions: [],
 				}
 				rolePermissions.set(name, entityPermissions)
@@ -111,11 +139,6 @@ export class AclFactory {
 				const entityPermissions = initEntityPermissions(role)
 				entityPermissions.definitions.push(definition)
 			}
-
-			const rolesWithCustomPrimary = allowCustomPrimaryAllRolesStore.get(entity) ? roles : allowCustomPrimaryStore.get(entity)
-			for (const role of rolesWithCustomPrimary) {
-				initEntityPermissions(role).allowCustomPrimary = true
-			}
 		}
 
 		return groupedPermissions
@@ -123,6 +146,6 @@ export class AclFactory {
 }
 
 
-export type EntityPermissions = { definitions: AllowDefinition<any>[]; allowCustomPrimary: boolean }
+export type EntityPermissions = { definitions: AllowDefinition<any>[] }
 export type PermissionsByEntity = Map<string, EntityPermissions>
 export type PermissionsByRoleAndEntity = Map<Role, PermissionsByEntity>

@@ -1,14 +1,10 @@
-import { Role } from './roles'
-import { allowCustomPrimaryAllRolesStore, allowCustomPrimaryStore } from './internal/stores'
-import { DecoratorFunction, EntityConstructor } from '../../model/definition/types'
+import { anyRole, Role } from './roles'
+import { DecoratorFunction } from '../../model/definition/types'
+import { extendEntityPermissions } from './extendEntityPermissions'
 
-export const allowCustomPrimary = (role?: Role | Role[]): DecoratorFunction<any> => {
-	return (entity: EntityConstructor) => {
-		if (!role) {
-			allowCustomPrimaryAllRolesStore.update(() => true, entity)
-		} else {
-			const roleArr = Array.isArray(role) ? role : [role]
-			allowCustomPrimaryStore.update(val => [...val, ...roleArr], entity)
-		}
-	}
+export const allowCustomPrimary = (roles: Role | Role[] | anyRole = anyRole): DecoratorFunction<any> => {
+	return extendEntityPermissions(roles, ({ permissions }) => ({
+		...permissions,
+		operations: { ...permissions.operations, customPrimary: true },
+	}))
 }

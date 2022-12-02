@@ -17,3 +17,8 @@ export class Role<Name extends string = string> {
 export const createRole = <Name extends string>(name: Name, options: RoleOptions = {}): Role<Name> => {
 	return new Role(name, options)
 }
+
+export const anyRole = Symbol('any role')
+export type anyRole = typeof anyRole
+
+export type RolesReference = Role | Role[] | anyRole
