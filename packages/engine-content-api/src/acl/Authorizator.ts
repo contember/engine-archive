@@ -54,6 +54,10 @@ export class Authorizator {
 	}
 
 	isSortable(entity: string, field: string): boolean {
-		return this.permissions?.[entity]?.operations?.sort?.[field] !== false
+		const sortPermissions = this.permissions?.[entity]?.operations?.sort
+		if (sortPermissions === undefined) {
+			return true
+		}
+		return sortPermissions[field] === true
 	}
 }

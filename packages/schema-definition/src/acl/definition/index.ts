@@ -6,6 +6,8 @@ export * from './permissions'
 export * from './references'
 export * from './roles'
 export * from './variables'
+export * from './sort'
+export * from './extendEntityPermissions'
 
 export const createAcl = (
 	exportedDefinitions: Record<string, any>,
