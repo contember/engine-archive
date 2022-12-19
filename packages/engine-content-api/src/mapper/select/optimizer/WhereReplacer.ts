@@ -1,16 +1,16 @@
 import { Input, Writable } from '@contember/schema'
 import deepEqual from 'fast-deep-equal'
 
-export const replaceWhere = (subject: Input.OptionalWhere, find: Input.OptionalWhere, replace: Input.OptionalWhere): Input.OptionalWhere => {
+export const replaceWhere = <T extends Input.Where>(subject: T, find: Input.OptionalWhere, replace: Input.Where): T => {
 	if (deepEqual(subject, find)) {
 		return replace
 	}
-	let result: Writable<Input.OptionalWhere> = subject
+	let result: Writable<T> = subject
 	let copied = false
 	for (const key in subject) {
 		const value = subject[key]
 		if (key === 'not') {
-			const newNot = replaceWhere(value as Input.OptionalWhere, find, replace)
+			const newNot = replaceWhere(value as T, find, replace)
 			if (newNot !== value) {
 				if (!copied) {
 					result = { ...result }
