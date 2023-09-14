@@ -290,7 +290,7 @@ CREATE TABLE Guest (
   society_id UUID,
   FOREIGN KEY (society_id) REFERENCES Society(id)
 );
-3:11
+
 CREATE TABLE Person (
   id UUID PRIMARY KEY
 );
@@ -408,18 +408,22 @@ ADD COLUMN address TEXT;`)).toMatchInlineSnapshot(`
           "name": "society_id",
           "type": "column def",
         },
+      ],
+      "constraints": [
         {
-          "constraints": [],
-          "dataType": {
-            "config": undefined,
-            "name": "KEY",
-            "type": "data type def",
-          },
-          "name": "FOREIGN",
-          "type": "column def",
+          "columns": [
+            "society_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Society",
+          "type": "foreign key",
         },
       ],
-      "constraints": [],
       "tableName": "Person",
       "type": "create table",
     },
@@ -522,18 +526,22 @@ ADD COLUMN address TEXT;`)).toMatchInlineSnapshot(`
           "name": "person_id",
           "type": "column def",
         },
+      ],
+      "constraints": [
         {
-          "constraints": [],
-          "dataType": {
-            "config": undefined,
-            "name": "KEY",
-            "type": "data type def",
-          },
-          "name": "FOREIGN",
-          "type": "column def",
+          "columns": [
+            "person_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Person",
+          "type": "foreign key",
         },
       ],
-      "constraints": [],
       "tableName": "Membership",
       "type": "create table",
     },
@@ -606,18 +614,35 @@ ADD COLUMN address TEXT;`)).toMatchInlineSnapshot(`
           "name": "role_id",
           "type": "column def",
         },
+      ],
+      "constraints": [
         {
-          "constraints": [],
-          "dataType": {
-            "config": undefined,
-            "name": "KEY",
-            "type": "data type def",
-          },
-          "name": "FOREIGN",
-          "type": "column def",
+          "columns": [
+            "person_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Person",
+          "type": "foreign key",
+        },
+        {
+          "columns": [
+            "role_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Role",
+          "type": "foreign key",
         },
       ],
-      "constraints": [],
       "tableName": "Person_Role",
       "type": "create table",
     },
@@ -683,19 +708,40 @@ ADD COLUMN address TEXT;`)).toMatchInlineSnapshot(`
           "name": "society_id",
           "type": "column def",
         },
+      ],
+      "constraints": [
+        {
+          "columns": [
+            "society_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Society",
+          "type": "foreign key",
+        },
+      ],
+      "tableName": "Guest",
+      "type": "create table",
+    },
+    {
+      "columns": [
         {
           "constraints": [],
           "dataType": {
             "config": undefined,
-            "name": "KEY",
+            "name": "UUID",
             "type": "data type def",
           },
-          "name": "FOREIGN",
+          "name": "id",
           "type": "column def",
         },
       ],
       "constraints": [],
-      "tableName": "Guest",
+      "tableName": "Person",
       "type": "create table",
     },
     {
@@ -781,18 +827,35 @@ ADD COLUMN address TEXT;`)).toMatchInlineSnapshot(`
           "name": "role_id",
           "type": "column def",
         },
+      ],
+      "constraints": [
         {
-          "constraints": [],
-          "dataType": {
-            "config": undefined,
-            "name": "KEY",
-            "type": "data type def",
-          },
-          "name": "FOREIGN",
-          "type": "column def",
+          "columns": [
+            "person_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Person",
+          "type": "foreign key",
+        },
+        {
+          "columns": [
+            "role_id",
+          ],
+          "constraintName": undefined,
+          "deferrable": false,
+          "initiallyDeferred": false,
+          "onDelete": undefined,
+          "onUpdate": undefined,
+          "refColumn": "id",
+          "refTable": "Role",
+          "type": "foreign key",
         },
       ],
-      "constraints": [],
       "tableName": "Person_Role",
       "type": "create table",
     },
