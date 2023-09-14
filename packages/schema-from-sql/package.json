@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@contember/schema": "workspace:*",
+    "@contember/schema-migrations": "workspace:*",
     "@contember/schema-utils": "workspace:*",
     "@contember/typesafe": "workspace:*",
     "pgsql-ast-parser": "^11.1.0"

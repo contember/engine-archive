@@ -1231,6 +1231,7 @@ __metadata:
   dependencies:
     "@contember/schema": "workspace:*"
     "@contember/schema-definition": "workspace:*"
+    "@contember/schema-migrations": "workspace:*"
     "@contember/schema-utils": "workspace:*"
     "@contember/typesafe": "workspace:*"
     "@types/node": ^18

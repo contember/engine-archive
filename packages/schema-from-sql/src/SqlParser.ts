@@ -11,7 +11,7 @@ export class SqlParser {
 		const statements: Statement[] = []
 		let i = 0
 		do {
-			const stm = this.parseCreateTable()
+			const stm = this.parseCreateTable() || this.parseAlter()
 			if (stm) {
 				statements.push(stm)
 			} else {
@@ -38,7 +38,7 @@ export class SqlParser {
 			return null
 		}
 		this.consume(/\(/)
-		const columns: CreateColumnDef[] = []
+		const columns: ColumnDef[] = []
 		let i = 0
 		let constraints: TableConstraintDef[] | null = null
 		do {
@@ -56,6 +56,7 @@ export class SqlParser {
 		} while (i++ < 1000)
 
 		this.consume(/\)/)
+		this.consume(/;/)
 
 		return {
 			type: 'create table',
@@ -65,7 +66,51 @@ export class SqlParser {
 		}
 	}
 
-	private parseColumn(): CreateColumnDef | null {
+	private parseAlter(): AlterTableStatement | null {
+		if (!this.consume(/alter\s+table\s+/)) {
+			return null
+		}
+		const tableName = this.consumeName()
+		if (!tableName) {
+			this.consumeUntil(';')
+			return null
+		}
+		const alters: AlterTableStatement['alters'] = []
+		for (let i = 0; i < 1000; i++) {
+			if (this.consume(/add(?=\W)/)) {
+				if (!this.consume(/column(?=\W)/)) {
+					const constraint = this.parseTableConstraint()
+					if (constraint) {
+						alters.push({ type: 'add constraint', constraint })
+					}
+				}
+				const column = this.parseColumn()
+				if (column) {
+					alters.push({ type: 'add column', column })
+				}
+			}
+			console.log(this.sql.substring(this.position, this.position + 20))
+			console.log(alters)
+
+			if (this.lookahead(/;/)) {
+				break
+			}
+			this.consumeUntil(',')
+		}
+
+		this.consumeUntil(';')
+
+
+		return {
+			type: 'alter table',
+			tableName,
+			alters,
+		}
+	}
+
+
+
+	private parseColumn(): ColumnDef | null {
 		const columnName = this.consumeName()
 		let columnType = this.consumeName()
 
@@ -139,8 +184,14 @@ export class SqlParser {
 		const constraints: TableConstraintDef[] = []
 		do {
 			const constraint = this.parseTableConstraint()
-
-		}
+			if (constraint === false) {
+				break
+			}
+			if (constraint !== null) {
+				constraints.push(constraint)
+			}
+		} while (true)
+		return constraints.length ? constraints : null
 	}
 
 	private parseTableConstraint(): TableConstraintDef | null | false {
@@ -149,7 +200,7 @@ export class SqlParser {
 		if (this.consume(/check\s*\(/)) {
 			let nest = 1
 			let start = this.position
-			do {
+			for (let i = 0; i < 1000; i++) {
 				const char = this.consumeUntil('\\(\\)')
 				if (!char) {
 					break
@@ -159,8 +210,7 @@ export class SqlParser {
 				} else if (--nest === 0) {
 					break
 				}
-			} while (true)
-
+			}
 			this.consumeRestOfColumnLine()
 
 			return {
@@ -203,6 +253,8 @@ export class SqlParser {
 			this.consume(/\(/)
 			const columns = this.parseColumnList()
 			this.consume(/\)/)
+
+			this.consume(/references(?=\W)/)
 
 			const refOptions = this.parseReferenceOptions()
 
@@ -258,12 +310,15 @@ export class SqlParser {
 		return names
 	}
 
-	private consumeRestOfColumnLine(): boolean {
+	private consumeRestOfColumnLine() {
 		let nest = 0
 		do {
-			const char = this.consumeUntil('\\(\\),', false)
+			const char = this.consumeUntil('\\(\\),;', false)
 			if (!char) {
-				return false
+				return
+			}
+			if (char === ';') {
+				return
 			}
 			this.consume(/\s+/)
 
@@ -273,9 +328,9 @@ export class SqlParser {
 			} else if (nest === 0) {
 				if (char === ',') {
 					this.consume(/,/)
-					return true
+					return
 				}
-				return false
+				return
 			} else if (char === ')') {
 				nest--
 			}
@@ -318,11 +373,11 @@ export type Statement =
 export type CreateTableStatement = {
 	type: 'create table'
 	tableName: string
-	columns: CreateColumnDef[]
+	columns: ColumnDef[]
 	constraints: TableConstraintDef[]
 }
 
-export type CreateColumnDef = {
+export type ColumnDef = {
 	type: 'column def'
 	name: string
 	dataType: DataTypeDef
@@ -374,6 +429,7 @@ export type TableConstraintDef =
 	| PrimaryKeyTableConstraintDef
 	| ExcludeTableConstraintDef
 	| ForeignKeyTableConstraintDef
+
 export type CheckTableConstraintDef = {
 	type: 'check'
 	constraintName?: string
@@ -426,7 +482,23 @@ export type DataTypeDef = {
 	config?: number[]
 }
 
-export type AlterTableStatement = {}
+export type AlterTableStatement = {
+	type: 'alter table'
+	tableName: string
+	alters: (
+		| AlterTableAddColumn
+		| AlterTableAddConstraint
+	)[]
+}
+export type AlterTableAddColumn = {
+	type: 'add column'
+	column: ColumnDef
+}
+
+export type AlterTableAddConstraint = {
+	type: 'add constraint'
+	constraint: TableConstraintDef
+}
 
 export type CreateIndexStatement = {}
 
