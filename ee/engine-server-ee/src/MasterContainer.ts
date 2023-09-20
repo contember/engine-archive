@@ -7,7 +7,6 @@ import {
 	MasterContainerArgs as BaseMasterContainerArgs,
 	MasterContainerFactory as BaseMasterContainerFactory,
 } from '@contember/engine-http'
-import { createSecretKey } from 'node:crypto'
 import { ProjectGroupContainerResolver } from './projectGroup/ProjectGroupContainerResolver'
 import { ProjectGroupResolver } from './projectGroup/ProjectGroupResolver'
 import { ServerConfig } from './config/configSchema'
@@ -48,9 +47,7 @@ export class MasterContainerFactory {
 				app.addMiddleware(createColllectHttpMetricsMiddleware(promRegistry))
 			})
 			.replaceService('projectGroupResolver', ({ projectGroupContainerResolver }) => {
-				const encryptionKey = serverConfig.projectGroup?.configEncryptionKey
-					? createSecretKey(Buffer.from(serverConfig.projectGroup?.configEncryptionKey, 'hex'))
-					: undefined
+				const encryptionKey = undefined
 				return new ProjectGroupResolver(
 					serverConfig.projectGroup?.domainMapping,
 					serverConfig.projectGroup?.configHeader,

@@ -1,0 +1,59 @@
+{
+	"formatVersion": 5,
+	"modifications": [
+		{
+			"modification": "createEntity",
+			"entity": {
+				"name": "Foo",
+				"primary": "id",
+				"primaryColumn": "id",
+				"tableName": "foo",
+				"fields": {
+					"id": {
+						"name": "id",
+						"columnName": "id",
+						"columnType": "uuid",
+						"nullable": false,
+						"type": "Uuid"
+					}
+				},
+				"unique": [],
+				"indexes": [],
+				"eventLog": {
+					"enabled": true
+				}
+			}
+		},
+		{
+			"modification": "createColumn",
+			"entityName": "Foo",
+			"field": {
+				"name": "value",
+				"columnName": "value",
+				"columnType": "text",
+				"nullable": true,
+				"type": "String"
+			}
+		},
+		{
+			"modification": "createTarget",
+			"target": {
+				"type": "webhook",
+				"name": "foo_watch_target",
+				"url": "http://{{base_domain}}/hook"
+			}
+		},
+		{
+			"modification": "createTrigger",
+			"trigger": {
+				"type": "watch",
+				"name": "foo_watch",
+				"entity": "Foo",
+				"watch": [
+					"value"
+				],
+				"target": "foo_watch_target"
+			}
+		}
+	]
+}
