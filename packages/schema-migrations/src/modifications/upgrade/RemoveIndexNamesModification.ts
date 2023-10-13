@@ -1,5 +1,5 @@
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateEveryEntity, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater, updateEveryEntity, updateModel } from '../../schema-builder/schemaUpdateUtils'
 import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
 
 export class RemoveIndexNamesModificationHandler implements ModificationHandler<RemoveIndexNamesModificationData>  {

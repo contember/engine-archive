@@ -1,13 +1,18 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater, updateEntity, updateField, updateModel } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { getEntity, tryGetColumnName } from '@contember/schema-utils'
 import { isIt } from '../../utils/isIt'
 import { updateRelations } from '../utils/diffUtils'
+import { builder } from '../builder'
 
 export class MakeRelationNullableModificationHandler implements ModificationHandler<MakeRelationNullableModificationData> {
-	constructor(private readonly data: MakeRelationNullableModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: MakeRelationNullableModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = getEntity(this.schema.model, this.data.entityName)
@@ -25,15 +30,7 @@ export class MakeRelationNullableModificationHandler implements ModificationHand
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const { entityName, fieldName } = this.data
-		return updateModel(
-			updateEntity(
-				entityName,
-				updateField<Model.AnyRelation & Model.NullableRelation>(fieldName, ({ field }) => ({
-					...field,
-					nullable: true,
-				})),
-			),
-		)
+		return builder(this.options, it => it.updateRelationNullable(entityName, fieldName, true))
 	}
 
 	describe() {

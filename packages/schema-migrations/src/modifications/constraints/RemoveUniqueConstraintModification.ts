@@ -1,18 +1,24 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
 	ModificationHandler,
 	ModificationHandlerCreateSqlOptions,
+	ModificationHandlerOptions,
 } from '../ModificationHandler'
 import deepEqual from 'fast-deep-equal'
 import { getUniqueConstraintColumns } from './utils'
 import { wrapIdentifier } from '../../utils/dbHelpers'
+import { builder } from '../builder'
 
 export class RemoveUniqueConstraintModificationHandler implements ModificationHandler<RemoveUniqueConstraintModificationData> {
-	constructor(private readonly data: RemoveUniqueConstraintModificationData, private readonly schema: Schema) {
+	constructor(
+		private readonly data: RemoveUniqueConstraintModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {
 	}
 
 	public createSql(builder: MigrationBuilder, { databaseMetadata, invalidateDatabaseMetadata }: ModificationHandlerCreateSqlOptions): void {
@@ -40,15 +46,7 @@ export class RemoveUniqueConstraintModificationHandler implements ModificationHa
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const fields = this.getFields()
-		return updateModel(
-			updateEntity(this.data.entityName, ({ entity }) => {
-				const unique = entity.unique.filter(it => !deepEqual(it.fields, fields))
-				return {
-					...entity,
-					unique,
-				}
-			}),
-		)
+		return builder(this.options, it => it.removeUnique(this.data.entityName, { fields }))
 	}
 
 	describe() {

@@ -1,18 +1,23 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater, updateEntity, updateModel } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
 	ModificationHandler,
-	ModificationHandlerCreateSqlOptions,
+	ModificationHandlerCreateSqlOptions, ModificationHandlerOptions,
 } from '../ModificationHandler'
 import { wrapIdentifier } from '../../utils/dbHelpers'
 import { getIndexColumns } from './utils'
 import deepEqual from 'fast-deep-equal'
+import { builder } from '../builder'
 
 export class CreateIndexModificationHandler implements ModificationHandler<CreateIndexModificationData> {
-	constructor(private readonly data: CreateIndexModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: CreateIndexModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder, { databaseMetadata, invalidateDatabaseMetadata }: ModificationHandlerCreateSqlOptions): void {
 		const entity = this.schema.model.entities[this.data.entityName]
@@ -35,15 +40,7 @@ export class CreateIndexModificationHandler implements ModificationHandler<Creat
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(
-			updateEntity(this.data.entityName, ({ entity }) => ({
-				...entity,
-				indexes: [
-					...entity.indexes,
-					this.data.index,
-				],
-			})),
-		)
+		return builder(this.options, it => it.createIndex(this.data.entityName, this.data.index))
 	}
 
 	describe() {

@@ -1,11 +1,16 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { createCheck, getConstraintName } from './enumUtils'
+import { builder } from '../builder'
 
 export class CreateEnumModificationHandler implements ModificationHandler<CreateEnumModificationData> {
-	constructor(private readonly data: CreateEnumModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: CreateEnumModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		builder.createDomain(this.data.enumName, 'text', {
@@ -15,13 +20,7 @@ export class CreateEnumModificationHandler implements ModificationHandler<Create
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(({ model }) => ({
-			...model,
-			enums: {
-				...model.enums,
-				[this.data.enumName]: this.data.values,
-			},
-		}))
+		return builder(this.options, it => it.addEnum(this.data))
 	}
 
 	describe() {

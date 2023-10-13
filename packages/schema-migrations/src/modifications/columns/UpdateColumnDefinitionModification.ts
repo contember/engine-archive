@@ -1,15 +1,21 @@
 import { escapeValue, MigrationBuilder } from '@contember/database-migrations'
 import { JSONValue, Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import deepEqual from 'fast-deep-equal'
 import { updateColumns } from '../utils/diffUtils'
 import { wrapIdentifier } from '../../utils/dbHelpers'
 import { getColumnSqlType } from '../utils/columnUtils'
 import { fillSeed } from './columnUtils'
+import { builder } from '../builder'
+import { ColumnDefinitionAlter } from '../../schema-builder/SchemaBuilder'
 
 export class UpdateColumnDefinitionModificationHandler implements ModificationHandler<UpdateColumnDefinitionModificationData>  {
-	constructor(private readonly data: UpdateColumnDefinitionModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: UpdateColumnDefinitionModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
@@ -70,17 +76,9 @@ export class UpdateColumnDefinitionModificationHandler implements ModificationHa
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(
-			updateEntity(
-				this.data.entityName,
-				updateField<Model.AnyColumn>(this.data.fieldName, ({ field }) => {
-					return {
-						...this.data.definition,
-						name: field.name,
-						columnName: field.columnName,
-					}
-				}),
-			),
+		return builder(
+			this.options,
+			it => it.updateColumnDefinition(this.data.entityName, this.data.fieldName, this.data.definition),
 		)
 	}
 
@@ -96,17 +94,6 @@ export class UpdateColumnDefinitionModificationHandler implements ModificationHa
 	}
 }
 
-type SequenceDefinitionAlter =
-	& Model.AnyColumn['sequence']
-	& {
-		restart?: boolean
-	}
-
-type ColumnDefinitionAlter =
-	& Omit<Model.AnyColumn, 'sequence' | 'columnName' | 'name'>
-	& {
-		sequence?: SequenceDefinitionAlter
-	}
 
 export interface UpdateColumnDefinitionModificationData {
 	entityName: string

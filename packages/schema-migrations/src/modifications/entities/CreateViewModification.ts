@@ -1,12 +1,17 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { Migration } from '../../Migration'
 import { PossibleEntityShapeInMigrations } from '../../utils/PartialEntity.js'
+import { builder } from '../builder'
 
 export class CreateViewModificationHandler implements ModificationHandler<CreateViewModificationData> {
-	constructor(private readonly data: CreateViewModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: CreateViewModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.data.entity
@@ -17,17 +22,11 @@ export class CreateViewModificationHandler implements ModificationHandler<Create
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(({ model }) => ({
-			...model,
-			entities: {
-				...model.entities,
-				[this.data.entity.name]: {
-					eventLog: { enabled: true }, // not relevant here...
-					...this.data.entity,
-					unique: Object.values(this.data.entity.unique),
-					indexes: Object.values(this.data.entity.indexes ?? []),
-				},
-			},
+		return builder(this.options, builder => builder.addEntity({
+			eventLog: { enabled: true },
+			...this.data.entity,
+			unique: Object.values(this.data.entity.unique),
+			indexes: Object.values(this.data.entity.indexes ?? []),
 		}))
 	}
 

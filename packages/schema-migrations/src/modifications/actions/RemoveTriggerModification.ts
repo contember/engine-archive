@@ -1,6 +1,6 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
 
 export class RemoveTriggerModificationHandler implements ModificationHandler<RemoveTriggerModificationData> {

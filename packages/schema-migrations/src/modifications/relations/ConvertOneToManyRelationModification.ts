@@ -1,6 +1,6 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel, updateSchema } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater, updateEntity, updateField, updateModel, updateSchema } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,

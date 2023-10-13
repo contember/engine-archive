@@ -1,15 +1,17 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
-	ModificationHandler, ModificationHandlerCreateSqlOptions,
+	ModificationHandler,
+	ModificationHandlerCreateSqlOptions,
 	ModificationHandlerOptions,
 } from '../ModificationHandler'
 import { createEventTrigger, createEventTrxTrigger } from '../utils/sqlUpdateUtils'
 import { PossibleEntityShapeInMigrations } from '../../utils/PartialEntity.js'
 import { getColumnSqlType } from '../utils/columnUtils'
+import { builder } from '../builder'
 
 export class CreateEntityModificationHandler implements ModificationHandler<CreateEntityModificationData> {
 	constructor(
@@ -43,17 +45,11 @@ export class CreateEntityModificationHandler implements ModificationHandler<Crea
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(({ model }) => ({
-			...model,
-			entities: {
-				...model.entities,
-				[this.data.entity.name]: {
-					eventLog: { enabled: true },
-					...this.data.entity,
-					unique: Object.values(this.data.entity.unique),
-					indexes: Object.values(this.data.entity.indexes ?? []),
-				},
-			},
+		return builder(this.options, builder => builder.addEntity({
+			eventLog: { enabled: true },
+			...this.data.entity,
+			unique: Object.values(this.data.entity.unique),
+			indexes: Object.values(this.data.entity.indexes ?? []),
 		}))
 	}
 

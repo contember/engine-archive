@@ -1,12 +1,18 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater, updateEntity, updateField, updateModel } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { updateColumns } from '../utils/diffUtils'
 import { acceptFieldVisitor } from '@contember/schema-utils'
+import { builder } from '../builder'
+import { isFieldType } from '../../schema-builder/SchemaBuilder'
 
 export class UpdateColumnNameModificationHandler implements ModificationHandler<UpdateColumnNameModificationData> {
-	constructor(private readonly data: UpdateColumnNameModificationData, private readonly schema: Schema) {
+	constructor(
+		private readonly data: UpdateColumnNameModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {
 	}
 
 	public createSql(builder: MigrationBuilder): void {
@@ -40,50 +46,47 @@ export class UpdateColumnNameModificationHandler implements ModificationHandler<
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(
-			updateEntity(
-				this.data.entityName,
-				updateField(this.data.fieldName, ({ field, entity }) =>
-					acceptFieldVisitor<Model.AnyField>(this.schema.model, entity, field, {
-						visitColumn: ({ column }) => {
-							return {
-								...column,
-								columnName: this.data.columnName,
-							}
-						},
-						visitManyHasOne: ({ entity, relation }) => {
-							return {
-								...relation,
-								joiningColumn: {
-									...relation.joiningColumn,
-									columnName: this.data.columnName,
-								},
-							}
-						},
-						visitOneHasOneOwning: ({ entity, relation }) => {
-							return {
-								...relation,
-								joiningColumn: {
-									...relation.joiningColumn,
-									columnName: this.data.columnName,
-								},
-							}
-						},
-						visitManyHasManyInverse: () => {
-							throw new Error('Cannot rename column of many-to-many relation')
-						},
-						visitManyHasManyOwning: () => {
-							throw new Error('Cannot rename column of many-to-many relation')
-						},
-						visitOneHasMany: () => {
-							throw new Error('Cannot rename column of one-to-many relation')
-						},
-						visitOneHasOneInverse: () => {
-							throw new Error('Cannot rename column of one-to-one inverse relation')
-						},
+		return builder(
+			this.options,
+			it => it.updateField(this.data.entityName, this.data.fieldName, isFieldType(['column', 'manyHasOne', 'oneHasOneOwning']), ({ field, entity }) =>
+				acceptFieldVisitor<Model.AnyField>(this.schema.model, entity, field, {
+					visitColumn: ({ column }) => {
+						return {
+							...column,
+							columnName: this.data.columnName,
+						}
 					},
-					),
-				),
+					visitManyHasOne: ({ entity, relation }) => {
+						return {
+							...relation,
+							joiningColumn: {
+								...relation.joiningColumn,
+								columnName: this.data.columnName,
+							},
+						}
+					},
+					visitOneHasOneOwning: ({ entity, relation }) => {
+						return {
+							...relation,
+							joiningColumn: {
+								...relation.joiningColumn,
+								columnName: this.data.columnName,
+							},
+						}
+					},
+					visitManyHasManyInverse: () => {
+						throw new Error('Cannot rename column of many-to-many relation')
+					},
+					visitManyHasManyOwning: () => {
+						throw new Error('Cannot rename column of many-to-many relation')
+					},
+					visitOneHasMany: () => {
+						throw new Error('Cannot rename column of one-to-many relation')
+					},
+					visitOneHasOneInverse: () => {
+						throw new Error('Cannot rename column of one-to-one inverse relation')
+					},
+				}),
 			),
 		)
 	}

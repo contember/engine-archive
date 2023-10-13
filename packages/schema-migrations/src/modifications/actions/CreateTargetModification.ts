@@ -1,6 +1,6 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Actions, Schema } from '@contember/schema'
-import { SchemaUpdater } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
 
 export class CreateTargetModificationHandler implements ModificationHandler<CreateTargetModificationData> {

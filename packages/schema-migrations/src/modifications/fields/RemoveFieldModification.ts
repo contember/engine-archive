@@ -1,9 +1,10 @@
 import { acceptFieldVisitor, isInverseRelation, isRelation } from '@contember/schema-utils'
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { removeField, SchemaUpdater } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { isDefined } from '../../utils/isDefined'
+import { builder } from '../builder'
 
 export class RemoveFieldModificationHandler implements ModificationHandler<RemoveFieldModificationData> {
 
@@ -38,7 +39,7 @@ export class RemoveFieldModificationHandler implements ModificationHandler<Remov
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return removeField(this.data.entityName, this.data.fieldName, this.options.formatVersion)
+		return builder(this.options, builder => builder.removeField(this.data.entityName, this.data.fieldName))
 	}
 
 	describe() {

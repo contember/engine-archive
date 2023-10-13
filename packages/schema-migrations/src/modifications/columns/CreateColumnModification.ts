@@ -1,14 +1,19 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { JSONValue, Model, Schema } from '@contember/schema'
-import { addField, SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { isColumn } from '@contember/schema-utils'
 import { createFields } from '../utils/diffUtils'
 import { getColumnSqlType } from '../utils/columnUtils'
 import { fillSeed } from './columnUtils'
+import { builder } from '../builder'
 
 export class CreateColumnModificationHandler implements ModificationHandler<CreateColumnModificationData> {
-	constructor(private readonly data: CreateColumnModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: CreateColumnModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
@@ -42,7 +47,7 @@ export class CreateColumnModificationHandler implements ModificationHandler<Crea
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(updateEntity(this.data.entityName, addField(this.data.field)))
+		return builder(this.options, builder => builder.addColumn(this.data.entityName, this.data.field))
 	}
 
 	describe({ createdEntities }: { createdEntities: string[] }) {

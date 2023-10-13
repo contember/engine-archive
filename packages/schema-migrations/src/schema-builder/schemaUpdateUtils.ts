@@ -1,8 +1,6 @@
 import { Acl, Model, Schema, Writable } from '@contember/schema'
-import { SchemaUpdateError } from '../exceptions'
-import { isDefined } from '../../utils/isDefined'
-import { isInverseRelation, isOwningRelation, isRelation, PredicateDefinitionProcessor } from '@contember/schema-utils'
-import { VERSION_ACL_PATCH, VERSION_REMOVE_RELATION_INVERSE_SIDE } from '../ModificationVersions'
+import { SchemaUpdateError } from '../modifications/exceptions'
+import { isDefined } from '../utils/isDefined'
 
 
 export type SchemaUpdater = (args: { schema: Schema }) => Schema
@@ -229,63 +227,3 @@ export const addField =
 				},
 			}
 		}
-
-export const removeField = (entityName: string, fieldName: string, version: number): SchemaUpdater => {
-	return ({ schema }) => {
-		const entity = schema.model.entities[entityName]
-		const field = entity.fields[fieldName]
-		return updateSchema(
-			version >= VERSION_ACL_PATCH
-				? updateAcl(
-					updateAclEveryRole(
-						updateAclEveryEntity(
-							updateAclFieldPermissions((permissions, entityName) => {
-								if (entityName !== entity.name) {
-									return permissions
-								}
-								const { [fieldName]: field, ...other } = permissions
-								return {
-									...other,
-								}
-							}),
-							updateAclEveryPredicate(({ predicate, entityName }) => {
-								const processor = new PredicateDefinitionProcessor(schema.model)
-								return processor.process(schema.model.entities[entityName], predicate, {
-									handleColumn: ctx =>
-										ctx.entity.name === entity.name && ctx.column.name === field.name ? undefined : ctx.value,
-									handleRelation: ctx =>
-										ctx.entity.name === entity.name && ctx.relation.name === field.name ? undefined : ctx.value,
-								})
-							}),
-						),
-					),
-				  )
-				: undefined,
-			isRelation(field) &&
-				isOwningRelation(field) &&
-				field.inversedBy &&
-				version >= VERSION_REMOVE_RELATION_INVERSE_SIDE
-				? removeField(field.target, field.inversedBy, version)
-				: undefined,
-			updateModel(
-				updateEntity(entity.name, ({ entity }) => {
-					const { [field.name]: removed, ...fields } = entity.fields
-					const indexes = entity.indexes.filter(index => !index.fields.includes(field.name))
-					const unique = entity.unique.filter(index => !index.fields.includes(field.name))
-					return {
-						...entity,
-						fields,
-						indexes,
-						unique,
-					}
-				}),
-				isRelation(field) && isInverseRelation(field)
-					? updateEntity(
-						field.target,
-						updateField<Model.AnyOwningRelation>(field.ownedBy, ({ field: { inversedBy, ...field } }) => field),
-					  )
-					: undefined,
-			),
-		)({ schema })
-	}
-}

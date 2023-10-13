@@ -1,27 +1,24 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import deepEqual from 'fast-deep-equal'
 import { updateRelations } from '../utils/diffUtils'
+import { builder } from '../builder'
 
 export class UpdateRelationOrderByModificationHandler implements ModificationHandler<UpdateRelationOrderByModificationData> {
 
-	constructor(private readonly data: UpdateRelationOrderByModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: UpdateRelationOrderByModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {}
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const { entityName, fieldName, orderBy } = this.data
-		return updateModel(
-			updateEntity(
-				entityName,
-				updateField<Model.AnyRelation & Model.OrderableRelation>(fieldName, ({ field }) => ({
-					...field,
-					orderBy,
-				})),
-			),
-		)
+		return builder(this.options, it => it.updateRelationOrderBy(entityName, fieldName, orderBy))
 	}
 
 	describe() {

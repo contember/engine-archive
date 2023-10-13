@@ -1,11 +1,11 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater, updateEntity, updateField, updateModel } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
 	ModificationHandler,
-	ModificationHandlerCreateSqlOptions,
+	ModificationHandlerCreateSqlOptions, ModificationHandlerOptions,
 } from '../ModificationHandler'
 import {
 	createEventTrigger,
@@ -16,12 +16,14 @@ import {
 import { isOwningRelation, isRelation } from '@contember/schema-utils'
 import { updateRelations } from '../utils/diffUtils'
 import { isIt } from '../../utils/isIt'
+import { builder } from '../builder'
 
 export class ToggleJunctionEventLogModificationHandler implements ModificationHandler<ToggleJunctionEventLogModificationData> {
 
 	constructor(
 		private readonly data: ToggleJunctionEventLogModificationData,
 		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
 	) {
 	}
 
@@ -47,22 +49,7 @@ export class ToggleJunctionEventLogModificationHandler implements ModificationHa
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const { entityName, fieldName, enabled } = this.data
-		return updateModel(
-			updateEntity(
-				entityName,
-				updateField<Model.ManyHasManyOwningRelation>(fieldName, ({ field: { joiningTable: { eventLog, ...joiningTable }, ...field } }) => {
-					return {
-						...field,
-						joiningTable: {
-							...joiningTable,
-							eventLog: {
-								enabled,
-							},
-						},
-					}
-				}),
-			),
-		)
+		return builder(this.options, it => it.updateJunctionEventLog(entityName, fieldName, enabled))
 	}
 
 	describe() {

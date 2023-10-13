@@ -1,21 +1,24 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
 	ModificationHandler,
 	ModificationHandlerCreateSqlOptions,
+	ModificationHandlerOptions,
 } from '../ModificationHandler'
 import { isIt } from '../../utils/isIt'
 import { updateRelations } from '../utils/diffUtils'
 import { acceptRelationTypeVisitor } from '@contember/schema-utils'
 import { addForeignKeyConstraint } from './helpers'
+import { builder } from '../builder'
 
 export class UpdateRelationOnDeleteModificationHandler implements ModificationHandler<UpdateRelationOnDeleteModificationData> {
 	constructor(
 		private readonly data: UpdateRelationOnDeleteModificationData,
 		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
 	) {}
 
 	public createSql(builder: MigrationBuilder, { databaseMetadata, invalidateDatabaseMetadata }: ModificationHandlerCreateSqlOptions): void {
@@ -41,15 +44,7 @@ export class UpdateRelationOnDeleteModificationHandler implements ModificationHa
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const { entityName, fieldName, onDelete } = this.data
-		return updateModel(
-			updateEntity(
-				entityName,
-				updateField<Model.AnyRelation & Model.JoiningColumnRelation>(fieldName, ({ field }) => ({
-					...field,
-					joiningColumn: { ...field.joiningColumn, onDelete },
-				})),
-			),
-		)
+		return builder(this.options, it => it.updateRelationOnDelete(entityName, fieldName, onDelete))
 	}
 
 	describe() {

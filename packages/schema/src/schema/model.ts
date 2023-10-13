@@ -216,6 +216,7 @@ export namespace Model {
 
 
 	export interface ColumnContext {
+		type: 'column'
 		entity: Model.Entity
 		column: Model.AnyColumn
 	}

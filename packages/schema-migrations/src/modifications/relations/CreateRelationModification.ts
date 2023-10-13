@@ -1,7 +1,7 @@
 import { Model, Schema } from '@contember/schema'
 import { acceptRelationTypeVisitor, isInverseRelation, isOwningRelation, isRelation } from '@contember/schema-utils'
 import { MigrationBuilder } from '@contember/database-migrations'
-import { addField, SchemaUpdater, updateEntity, updateModel, updateSchema } from '../utils/schemaUpdateUtils'
+import { addField, SchemaUpdater, updateEntity, updateModel, updateSchema } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,

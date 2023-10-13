@@ -1,6 +1,6 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater, updateEntity, updateModel } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
@@ -14,6 +14,7 @@ import {
 	dropEventTrigger,
 	dropEventTrxTrigger,
 } from '../utils/sqlUpdateUtils'
+import { builder } from '../builder'
 
 export class ToggleEventLogModificationHandler implements ModificationHandler<ToggleEventLogModificationData> {
 
@@ -40,15 +41,13 @@ export class ToggleEventLogModificationHandler implements ModificationHandler<To
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const { entityName, enabled } = this.data
-		return updateModel(
-			updateEntity(
-				entityName,
-				({ entity: { eventLog, ...entity } }) => ({
-					...entity,
-					eventLog: { enabled },
-				}),
-			),
-		)
+		return builder(this.options, it => it.updateEntity(
+			entityName,
+			({ entity: { eventLog, ...entity } }) => ({
+				...entity,
+				eventLog: { enabled },
+			}),
+		))
 	}
 
 	describe() {

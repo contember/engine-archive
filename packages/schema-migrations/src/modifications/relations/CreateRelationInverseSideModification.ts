@@ -1,6 +1,6 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { addField, SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
+import { addField, SchemaUpdater, updateEntity, updateField, updateModel } from '../../schema-builder/schemaUpdateUtils'
 import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
 import { createFields } from '../utils/diffUtils'
 import { isInverseRelation, isRelation } from '@contember/schema-utils'

@@ -1,18 +1,24 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
 	ModificationHandler,
 	ModificationHandlerCreateSqlOptions,
+	ModificationHandlerOptions,
 } from '../ModificationHandler'
 import deepEqual from 'fast-deep-equal'
 import { getIndexColumns } from './utils'
 import { wrapIdentifier } from '../../utils/dbHelpers'
+import { builder } from '../builder'
 
 export class RemoveIndexModificationHandler implements ModificationHandler<RemoveIndexModificationData>  {
-	constructor(private readonly data: RemoveIndexModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: RemoveIndexModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder, { databaseMetadata, invalidateDatabaseMetadata }: ModificationHandlerCreateSqlOptions): void {
 		const entity = this.schema.model.entities[this.data.entityName]
@@ -37,15 +43,7 @@ export class RemoveIndexModificationHandler implements ModificationHandler<Remov
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const fields = this.getFields()
-		return updateModel(
-			updateEntity(this.data.entityName, ({ entity }) => {
-				const indexes = entity.indexes.filter(it => !deepEqual(it.fields, fields))
-				return {
-					...entity,
-					indexes,
-				}
-			}),
-		)
+		return builder(this.options, it => it.removeIndex(this.data.entityName, { fields }))
 	}
 
 	describe() {

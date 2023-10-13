@@ -1,25 +1,17 @@
 import { MigrationBuilder } from '@contember/database-migrations'
-import { Acl, Schema } from '@contember/schema'
-import {
-	removeField,
-	SchemaUpdater,
-	updateAcl,
-	updateAclEntities,
-	updateAclEveryEntity,
-	updateAclEveryPredicate,
-	updateAclEveryRole,
-	updateModel,
-	updateSchema,
-} from '../utils/schemaUpdateUtils'
+import { Schema } from '@contember/schema'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
-	ModificationHandler, ModificationHandlerCreateSqlOptions,
+	ModificationHandler,
+	ModificationHandlerCreateSqlOptions,
 	ModificationHandlerOptions,
 } from '../ModificationHandler'
-import { VERSION_ACL_PATCH, VERSION_REMOVE_REFERENCING_RELATIONS } from '../ModificationVersions'
-import { isRelation, PredicateDefinitionProcessor } from '@contember/schema-utils'
+import { VERSION_REMOVE_REFERENCING_RELATIONS } from '../ModificationVersions'
+import { isRelation } from '@contember/schema-utils'
 import { removeFieldModification } from '../fields'
+import { builder } from '../builder'
 
 export class RemoveEntityModificationHandler implements ModificationHandler<RemoveEntityModificationData> {
 	constructor(
@@ -44,56 +36,7 @@ export class RemoveEntityModificationHandler implements ModificationHandler<Remo
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateSchema(
-			this.options.formatVersion >= VERSION_ACL_PATCH
-				? updateAcl(
-					updateAclEveryRole(
-						({ role }) => ({
-							...role,
-							variables: Object.fromEntries(
-								Object.entries(role.variables).filter(([, variable]) =>
-									variable.type !== Acl.VariableType.entity || variable.entityName !== this.data.entityName,
-								),
-							),
-						}),
-						updateAclEntities(({ entities }) => {
-							const { [this.data.entityName]: removed, ...other } = entities
-							return other
-						}),
-						updateAclEveryEntity(
-							updateAclEveryPredicate(({ predicate, entityName, schema }) => {
-								const processor = new PredicateDefinitionProcessor(schema.model)
-								const currentEntity = schema.model.entities[entityName]
-								return processor.process(currentEntity, predicate, {
-									handleColumn: ctx => {
-										return ctx.entity.name === this.data.entityName ? undefined : ctx.value
-									},
-									handleRelation: ctx => {
-										return ctx.entity.name === this.data.entityName ? undefined : ctx.value
-									},
-								})
-							}),
-						),
-					),
-				  )
-				: undefined,
-			this.options.formatVersion >= VERSION_REMOVE_REFERENCING_RELATIONS
-				? ({ schema }) => {
-					const fieldsToRemove = this.getFieldsToRemove(schema)
-					return fieldsToRemove.reduce(
-						(schema, [entity, field]) => removeField(entity, field, this.options.formatVersion)({ schema }),
-						schema,
-					)
-				  }
-				: undefined,
-			updateModel(({ model }) => {
-				const { [this.data.entityName]: removed, ...entities } = model.entities
-				return {
-					...model,
-					entities: { ...entities },
-				}
-			}),
-		)
+		return builder(this.options, builder => builder.removeEntity(this.data.entityName))
 	}
 
 	private getFieldsToRemove(schema: Schema): [entity: string, field: string][] {

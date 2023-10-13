@@ -1,10 +1,15 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater, updateEntity, updateModel } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
+import { builder } from '../builder'
 
 export class UpdateEntityTableNameModificationHandler implements ModificationHandler<UpdateEntityTableNameModificationData> {
-	constructor(private readonly data: UpdateEntityTableNameModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: UpdateEntityTableNameModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		const entity = this.schema.model.entities[this.data.entityName]
@@ -16,12 +21,10 @@ export class UpdateEntityTableNameModificationHandler implements ModificationHan
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(
-			updateEntity(this.data.entityName, ({ entity }) => ({
-				...entity,
-				tableName: this.data.tableName,
-			})),
-		)
+		return builder(this.options, it => it.updateEntity(this.data.entityName, ({ entity }) => ({
+			...entity,
+			tableName: this.data.tableName,
+		})))
 	}
 
 	describe() {

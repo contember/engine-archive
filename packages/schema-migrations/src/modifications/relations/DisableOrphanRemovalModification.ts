@@ -1,24 +1,24 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateField, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater, updateEntity, updateField, updateModel } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
 import { isOwningRelation } from '@contember/schema-utils'
 import { updateRelations } from '../utils/diffUtils'
+import { builder } from '../builder'
 
 export class DisableOrphanRemovalModificationHandler implements ModificationHandler<DisableOrphanRemovalModificationData> {
 
-	constructor(private readonly data: DisableOrphanRemovalModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: DisableOrphanRemovalModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {}
 
 	public getSchemaUpdater(): SchemaUpdater {
 		const { entityName, fieldName } = this.data
-		return updateModel(
-			updateEntity(
-				entityName,
-				updateField<Model.OneHasOneOwningRelation>(fieldName, ({ field: { orphanRemoval, ...field } }) => field),
-			),
-		)
+		return builder(this.options, it => it.updateRelationOrphanRemoval(entityName, fieldName, false))
 	}
 
 	describe() {

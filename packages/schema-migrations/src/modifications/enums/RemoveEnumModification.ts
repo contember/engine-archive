@@ -1,23 +1,22 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Schema } from '@contember/schema'
-import { SchemaUpdater, updateModel } from '../utils/schemaUpdateUtils'
-import { createModificationType, Differ, ModificationHandler } from '../ModificationHandler'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
+import { createModificationType, Differ, ModificationHandler, ModificationHandlerOptions } from '../ModificationHandler'
+import { builder } from '../builder'
 
 export class RemoveEnumModificationHandler implements ModificationHandler<RemoveEnumModificationData> {
-	constructor(private readonly data: RemoveEnumModificationData, private readonly schema: Schema) {}
+	constructor(
+		private readonly data: RemoveEnumModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {}
 
 	public createSql(builder: MigrationBuilder): void {
 		builder.dropDomain(this.data.enumName)
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(({ model }) => {
-			const { [this.data.enumName]: removedEnum, ...enums } = model.enums
-			return {
-				...model,
-				enums,
-			}
-		})
+		return builder(this.options, it => it.removeEnum(this.data.enumName))
 	}
 
 	describe() {

@@ -1,5 +1,5 @@
 import { MigrationBuilder } from '@contember/database-migrations'
-import { SchemaUpdater } from './utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../schema-builder/schemaUpdateUtils'
 import { Schema } from '@contember/schema'
 import { Migration } from '../Migration'
 import { SchemaDatabaseMetadata } from '@contember/schema-utils'

@@ -1,18 +1,24 @@
 import { MigrationBuilder } from '@contember/database-migrations'
 import { Model, Schema } from '@contember/schema'
-import { SchemaUpdater, updateEntity, updateModel } from '../utils/schemaUpdateUtils'
+import { SchemaUpdater } from '../../schema-builder/schemaUpdateUtils'
 import {
 	createModificationType,
 	Differ,
 	ModificationHandler,
 	ModificationHandlerCreateSqlOptions,
+	ModificationHandlerOptions,
 } from '../ModificationHandler'
 import { wrapIdentifier } from '../../utils/dbHelpers'
 import { getUniqueConstraintColumns } from './utils'
 import deepEqual from 'fast-deep-equal'
+import { builder } from '../builder'
 
 export class CreateUniqueConstraintModificationHandler implements ModificationHandler<CreateUniqueConstraintModificationData> {
-	constructor(private readonly data: CreateUniqueConstraintModificationData, private readonly schema: Schema) {
+	constructor(
+		private readonly data: CreateUniqueConstraintModificationData,
+		private readonly schema: Schema,
+		private readonly options: ModificationHandlerOptions,
+	) {
 	}
 
 	public createSql(builder: MigrationBuilder, { databaseMetadata, invalidateDatabaseMetadata }: ModificationHandlerCreateSqlOptions): void {
@@ -36,15 +42,7 @@ export class CreateUniqueConstraintModificationHandler implements ModificationHa
 	}
 
 	public getSchemaUpdater(): SchemaUpdater {
-		return updateModel(
-			updateEntity(this.data.entityName, ({ entity }) => ({
-				...entity,
-				unique: [
-					...entity.unique,
-					this.data.unique,
-				],
-			})),
-		)
+		return builder(this.options, it => it.createUnique(this.data.entityName, this.data.unique))
 	}
 
 	describe({ createdEntities }: { createdEntities: string[] }) {
