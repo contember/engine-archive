@@ -78,10 +78,27 @@ const variablesSchema = Typesafe.record(
 
 const variableSchemaCheck: Typesafe.Equals<Acl.Variables, ReturnType<typeof variablesSchema>> = true
 
+const richPredicateSchema = Typesafe.intersection(
+	Typesafe.object({
+		predicate: Typesafe.union(Typesafe.string, Typesafe.literal(true)),
+	}),
+	Typesafe.partial({
+		through: Typesafe.union(Typesafe.array(Typesafe.string), Typesafe.literal(true)),
+	}),
+)
+const richPredicateSchemaCheck: Typesafe.Equals<Acl.RichPredicate, ReturnType<typeof richPredicateSchema>> = true
+
+const predicateSchema = Typesafe.union(
+	Typesafe.string,
+	Typesafe.boolean,
+	Typesafe.array<Acl.RichPredicate>(richPredicateSchema),
+)
+const predicateSchemaCheck: Typesafe.Equals<Acl.Predicate, ReturnType<typeof predicateSchema>> = true
 const fieldPermissionsSchema = Typesafe.record(
 	Typesafe.string,
-	Typesafe.union(Typesafe.string, Typesafe.boolean),
+	predicateSchema,
 )
+
 const predicatesSchema = Typesafe.record(
 	Typesafe.string,
 	(v, p): Acl.PredicateDefinition => Typesafe.anyJsonObject(v, p) as Acl.PredicateDefinition,
@@ -93,7 +110,7 @@ const entityOperationsSchema = Typesafe.partial({
 	read: fieldPermissionsSchema,
 	create: fieldPermissionsSchema,
 	update: fieldPermissionsSchema,
-	delete: Typesafe.union(Typesafe.string, Typesafe.boolean),
+	delete: predicateSchema,
 	customPrimary: Typesafe.boolean,
 })
 const opSchemaCheck: Typesafe.Equals<Acl.EntityOperations, ReturnType<typeof entityOperationsSchema>> = true

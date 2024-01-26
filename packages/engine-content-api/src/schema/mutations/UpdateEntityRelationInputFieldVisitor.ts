@@ -12,16 +12,16 @@ import { Accessor, filterObject } from '../../utils'
 import { EntityInputProvider, EntityInputType } from './EntityInputProvider'
 import { acceptFieldVisitor } from '@contember/schema-utils'
 import { UpdateEntityRelationAllowedOperationsVisitor } from './UpdateEntityRelationAllowedOperationsVisitor'
-import { Authorizator } from '../../acl'
 import { ImplementationException } from '../../exception'
 import { ConnectOrCreateRelationInputProvider } from './ConnectOrCreateRelationInputProvider'
+import { Permissions, ThroughAnyRelation } from '../../acl'
 
 export class UpdateEntityRelationInputFieldVisitor implements Model.ColumnVisitor<never>,
 	Model.RelationByGenericTypeVisitor<GraphQLInputObjectType | undefined> {
 
 	constructor(
 		private readonly schema: Model.Schema,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly whereTypeBuilder: WhereTypeProvider,
 		private readonly updateEntityInputProviderAccessor: Accessor<EntityInputProvider<EntityInputType.update>>,
 		private readonly createEntityInputProvider: EntityInputProvider<EntityInputType.create>,
@@ -37,7 +37,7 @@ export class UpdateEntityRelationInputFieldVisitor implements Model.ColumnVisito
 	public visitHasOne({ targetRelation, targetEntity, relation, entity }: Model.AnyHasOneRelationContext) {
 		const withoutRelation = targetRelation ? targetRelation.name : undefined
 
-		const whereInputType = this.createUniqueWhereInput(targetEntity)
+		const whereInputType = this.createUniqueWhereInput(targetEntity, targetRelation)
 		const whereInput = whereInputType ? { type: whereInputType } : undefined
 
 		const createInputType = this.createEntityInputProvider.getInput(targetEntity.name, withoutRelation)
@@ -90,7 +90,7 @@ export class UpdateEntityRelationInputFieldVisitor implements Model.ColumnVisito
 	public visitHasMany({ entity, relation, targetEntity, targetRelation }: Model.AnyHasManyRelationContext) {
 		const withoutRelation = targetRelation ? targetRelation.name : undefined
 
-		const whereInputType = this.createUniqueWhereInput(targetEntity)
+		const whereInputType = this.createUniqueWhereInput(targetEntity, targetRelation)
 		const whereInput = whereInputType ? { type: whereInputType } : undefined
 
 		const createInputType = this.createEntityInputProvider.getInput(targetEntity.name, withoutRelation)
@@ -164,8 +164,12 @@ export class UpdateEntityRelationInputFieldVisitor implements Model.ColumnVisito
 		)
 	}
 
-	private createUniqueWhereInput(targetEntity: Model.Entity): GraphQLInputObjectType | undefined {
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, targetEntity.name) === 'no') {
+	private createUniqueWhereInput(targetEntity: Model.Entity, targetRelation: Model.Relation | null): GraphQLInputObjectType | undefined {
+		if (!this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.read,
+			entity: targetEntity.name,
+			through: targetRelation?.name ?? ThroughAnyRelation,
+		})) {
 			return undefined
 		}
 		const uniqueWhere = this.whereTypeBuilder.getEntityUniqueWhereType(targetEntity.name)

@@ -1,12 +1,15 @@
 import { SelectExecutionHandler, SelectExecutionHandlerContext } from '../SelectExecutionHandler'
 import { Path } from '../Path'
 import { Acl, Input } from '@contember/schema'
-import { PredicateFactory } from '../../../acl'
+import { Permissions, PredicateFactory, ThroughAnyRelation, ThroughRoot } from '../../../acl'
 import { WhereBuilder } from '../WhereBuilder'
 import { ObjectNode } from '../../../inputProcessing'
 
 export class MetaHandler implements SelectExecutionHandler<{}> {
-	constructor(private readonly whereBuilder: WhereBuilder, private readonly predicateFactory: PredicateFactory) {}
+	constructor(
+		private readonly whereBuilder: WhereBuilder,
+		private readonly permissions: Permissions,
+	) {}
 
 	process(context: SelectExecutionHandlerContext): void {
 		const { objectNode, path } = context
@@ -36,10 +39,15 @@ export class MetaHandler implements SelectExecutionHandler<{}> {
 		if (entity.primary === fieldName) {
 			return
 		}
-		const fieldPredicate = this.predicateFactory.getFieldPredicate(entity, operation, fieldName)
+		const fieldPredicate = this.permissions.getFieldPredicate({
+			operation,
+			entity: entity.name,
+			field: fieldName,
+			through: context.through,
+		})
 		context.addColumn({
 			path: metaPath,
-			valueGetter: context.addPredicate(fieldPredicate.predicate),
+			valueGetter: context.addPredicate(fieldPredicate),
 		})
 	}
 }

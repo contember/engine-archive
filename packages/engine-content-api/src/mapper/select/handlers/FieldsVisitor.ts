@@ -2,13 +2,13 @@ import { Acl, Input, Model, Settings } from '@contember/schema'
 import { Mapper } from '../../Mapper'
 import { RelationFetcher } from '../RelationFetcher'
 import { SelectExecutionHandlerContext } from '../SelectExecutionHandler'
-import { PredicateFactory } from '../../../acl'
+import { Permissions, PredicateFactory } from '../../../acl'
 import { Literal, wrapIdentifier } from '@contember/database'
 
 export class FieldsVisitor implements Model.RelationByTypeVisitor<void>, Model.ColumnVisitor<void> {
 	constructor(
 		private readonly relationFetcher: RelationFetcher,
-		private readonly predicateFactory: PredicateFactory,
+		private readonly permissions: Permissions,
 		private readonly mapper: Mapper,
 		private readonly executionContext: SelectExecutionHandlerContext,
 		private readonly relationPath: Model.AnyRelationContext[],
@@ -182,8 +182,13 @@ export class FieldsVisitor implements Model.RelationByTypeVisitor<void>, Model.C
 		})
 	}
 
-	private getRequiredPredicate(entity: Model.Entity, field: Model.AnyField): Acl.Predicate | undefined {
-		const fieldPredicate = this.predicateFactory.getFieldPredicate(entity, Acl.Operation.read, field.name)
-		return fieldPredicate.isSameAsPrimary ? undefined : fieldPredicate.predicate
+	private getRequiredPredicate(entity: Model.Entity, field: Model.AnyField): boolean | Acl.PredicateDefinition[] {
+		return this.permissions.getFieldPredicate({
+			operation: Acl.Operation.read,
+			entity: entity.name,
+			field: field.name,
+			through: this.executionContext.through,
+			ifExtra: true,
+		})
 	}
 }

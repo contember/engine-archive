@@ -1,16 +1,10 @@
-import {
-	GraphQLBoolean,
-	GraphQLInputFieldConfig,
-	GraphQLInputFieldConfigMap,
-	GraphQLInputObjectType,
-	GraphQLInputType,
-} from 'graphql'
+import { GraphQLBoolean, GraphQLInputFieldConfig, GraphQLInputFieldConfigMap, GraphQLInputObjectType, GraphQLInputType } from 'graphql'
 import { acceptFieldVisitor, getEntity } from '@contember/schema-utils'
 import { GqlTypeName } from '../utils'
 import { Acl, Model } from '@contember/schema'
-import { Authorizator } from '../../acl'
 import { singletonFactory } from '../../utils'
 import { ImplementationException } from '../../exception'
+import { Permissions, ThroughUnknown } from '../../acl'
 
 export class EntityInputProvider<Operation extends EntityInputType> {
 	private entityInputs = singletonFactory<
@@ -24,7 +18,7 @@ export class EntityInputProvider<Operation extends EntityInputType> {
 	constructor(
 		private readonly operation: Operation,
 		private readonly schema: Model.Schema,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly visitor: Model.FieldVisitor<GraphQLInputFieldConfig | undefined>,
 	) {}
 
@@ -48,7 +42,7 @@ export class EntityInputProvider<Operation extends EntityInputType> {
 					throw new ImplementationException(`EntityInputProvider: Invalid operation ${this.operation}`)
 			}
 		})()
-		if (this.authorizator.getEntityPermission(operation, entity.name) === 'no') {
+		if (this.permissions.canPossiblyAccessEntity({ operation: operation, entity: entity.name, through: ThroughUnknown })) {
 			return undefined
 		}
 

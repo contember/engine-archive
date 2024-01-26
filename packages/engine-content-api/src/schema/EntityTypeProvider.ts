@@ -15,11 +15,11 @@ import { ColumnTypeResolver } from './ColumnTypeResolver'
 import { FieldArgsVisitor, FieldTypeVisitor } from './entities'
 import { aliasAwareResolver, GqlTypeName } from './utils'
 import { WhereTypeProvider } from './WhereTypeProvider'
-import { Authorizator } from '../acl'
 import { FieldAccessVisitor } from './FieldAccessVisitor'
 import { OrderByTypeProvider } from './OrderByTypeProvider'
 import { EntityFieldsProvider } from '../extensions'
 import { ImplementationException } from '../exception'
+import { Permissions, ThroughUnknown } from '../acl'
 
 export class EntityTypeProvider {
 	private entities = singletonFactory(name => this.createEntity(name))
@@ -42,7 +42,7 @@ export class EntityTypeProvider {
 
 	constructor(
 		private readonly schema: Model.Schema,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly columnTypeResolver: ColumnTypeResolver,
 		private readonly whereTypeProvider: WhereTypeProvider,
 		private readonly orderByTypeProvider: OrderByTypeProvider,
@@ -54,14 +54,14 @@ export class EntityTypeProvider {
 	}
 
 	public getEntity(entityName: string): GraphQLObjectType {
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, entityName) === 'no') {
+		if (!this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.read, entity: entityName, through: ThroughUnknown })) {
 			throw new ImplementationException()
 		}
 		return this.entities(entityName)
 	}
 
 	public getConnection(entityName: string): GraphQLObjectType {
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, entityName) === 'no') {
+		if (!this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.read, entity: entityName, through: ThroughUnknown })) {
 			throw new ImplementationException()
 		}
 		return this.connections(entityName)
@@ -76,7 +76,7 @@ export class EntityTypeProvider {
 
 	private getEntityFields(entityName: string) {
 		const entity = getEntityFromSchema(this.schema, entityName)
-		const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.authorizator)
+		const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.permissions)
 		const accessibleFields = Object.values(entity.fields).filter(field =>
 			acceptFieldVisitor(this.schema, entity, field.name, accessVisitor),
 		)
@@ -101,7 +101,7 @@ export class EntityTypeProvider {
 		}
 
 		for (const field of accessibleFields) {
-			const fieldTypeVisitor = new FieldTypeVisitor(this.columnTypeResolver, this, this.authorizator)
+			const fieldTypeVisitor = new FieldTypeVisitor(this.columnTypeResolver, this, this.permissions)
 			const type: GraphQLOutputType = acceptFieldVisitor(this.schema, entity, field.name, fieldTypeVisitor)
 
 			const fieldArgsVisitor = new FieldArgsVisitor(this.whereTypeProvider, this.orderByTypeProvider)

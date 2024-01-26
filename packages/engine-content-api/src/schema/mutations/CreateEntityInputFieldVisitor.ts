@@ -2,7 +2,7 @@ import { GraphQLInputFieldConfig, GraphQLList, GraphQLNonNull } from 'graphql'
 import { Acl, Model } from '@contember/schema'
 import { ColumnTypeResolver } from '../ColumnTypeResolver'
 import { CreateEntityRelationInputProvider } from './CreateEntityRelationInputProvider'
-import { Authorizator } from '../../acl'
+import { Permissions, ThroughUnknown } from '../../acl'
 
 export class CreateEntityInputFieldVisitor implements
 	Model.ColumnVisitor<GraphQLInputFieldConfig | undefined>,
@@ -10,16 +10,16 @@ export class CreateEntityInputFieldVisitor implements
 
 	constructor(
 		private readonly schema: Model.Schema,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly columnTypeResolver: ColumnTypeResolver,
 		private readonly createEntityRelationInputProvider: CreateEntityRelationInputProvider,
 	) {}
 
 	public visitColumn({ entity, column }: Model.ColumnContext): GraphQLInputFieldConfig | undefined {
-		if (entity.primary === column.name && !this.authorizator.isCustomPrimaryAllowed(entity.name)) {
+		if (entity.primary === column.name && !this.permissions.isCustomPrimaryAllowed(entity.name)) {
 			return undefined
 		}
-		if (this.authorizator.getFieldPermissions(Acl.Operation.create, entity.name, column.name) === 'no') {
+		if (!this.permissions.canPossiblyAccessField({ operation: Acl.Operation.create, entity: entity.name, field: column.name, through: ThroughUnknown })) {
 			return undefined
 		}
 		const type = this.columnTypeResolver.getType(column)

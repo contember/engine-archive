@@ -2,10 +2,10 @@ import { GraphQLInputObjectType, GraphQLNonNull } from 'graphql'
 import { Acl, Model } from '@contember/schema'
 import { aliasAwareResolver, EntityTypeProvider, FieldAccessVisitor, GqlTypeName, WhereTypeProvider } from '../../schema'
 import { acceptFieldVisitor } from '@contember/schema-utils'
-import { Authorizator } from '../../acl'
 import { getFieldsForUniqueWhere } from '../../utils'
 import { HasManyToHasOneReducer, HasManyToHasOneReducerExtension } from './HasManyToHasOneReducer'
 import { GraphQLFieldConfig } from 'graphql'
+import { Permissions } from '../../acl'
 
 type Result = [
 	string,
@@ -20,7 +20,7 @@ export class HasManyToHasOneRelationReducerFieldVisitor implements
 
 	constructor(
 		private readonly schema: Model.Schema,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly entityTypeProvider: EntityTypeProvider,
 		private readonly whereTypeProvider: WhereTypeProvider,
 	) {}
@@ -72,7 +72,7 @@ export class HasManyToHasOneRelationReducerFieldVisitor implements
 					this.schema,
 					targetEntity.name,
 					field,
-					new FieldAccessVisitor(Acl.Operation.read, this.authorizator),
+					new FieldAccessVisitor(Acl.Operation.read, this.permissions),
 				),
 			)
 			.map<Result | null>(fieldName => {

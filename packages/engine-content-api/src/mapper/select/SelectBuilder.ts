@@ -11,7 +11,7 @@ import { MetaHandler } from './handlers'
 import { Mapper } from '../Mapper'
 import { FieldNode, ObjectNode } from '../../inputProcessing'
 import { assertNever } from '../../utils'
-import { PredicateFactory } from '../../acl'
+import { PredicateFactory, ThroughAnyRelation, ThroughRoot } from '../../acl'
 
 export class SelectBuilder {
 	private resolver: (value: SelectRow[]) => void = () => {
@@ -86,38 +86,47 @@ export class SelectBuilder {
 			input = input.withField(new FieldNode(entity.primary, entity.primary, {}))
 		}
 
-		const fetchedPredicates = new Set()
-		const addPredicate = (predicate: Acl.Predicate): ColumnValueGetter<boolean> => {
+		const predicateAliasMap = new Map<Acl.PredicateDefinition, string>()
+		let predicateAliasCounter = 0
+		const addPredicate = (predicate: boolean | Acl.PredicateDefinition[]): ColumnValueGetter<boolean> => {
 			if (typeof predicate === 'boolean') {
 				return () => predicate
 			}
-			const predicatePath = path.for('__predicate').for(predicate)
 
-			if (!fetchedPredicates.has(predicate)) {
-				const relationContext = this.relationPath[this.relationPath.length - 1]
+			const aliases: string[] = []
+			for (const singlePredicate of predicate) {
+				let predicateAlias = predicateAliasMap.get(singlePredicate) ?? `predicate_${predicateAliasCounter++}`
+				const hasAlias = predicateAliasMap.has(singlePredicate)
 
-				const primaryPredicate = this.predicateFactory.create(entity, Acl.Operation.read, undefined, relationContext)
-				const fieldPredicate = this.predicateFactory.buildPredicates(entity, [predicate], relationContext)
+				const predicatePath = path.for(predicateAlias)
+				aliases.push(predicatePath.alias)
 
-				this.qb = this.whereBuilder.buildAdvanced(
-					entity,
-					path.back(),
-					fieldPredicate,
-					apply => this.qb.select(expr =>
-						expr.selectCondition(condition => {
-							condition = apply(condition)
-							if (condition.isEmpty()) {
-								return condition.raw('true')
-							}
-							return condition
-						}),
-					predicatePath.alias,
-					),
-					{ relationPath: this.relationPath, evaluatedPredicates: [primaryPredicate] },
-				)
-				fetchedPredicates.add(predicate)
+				if (!hasAlias) {
+					const relationContext = this.relationPath[this.relationPath.length - 1]
+
+					const primaryPredicate = this.predicateFactory.create(entity, Acl.Operation.read, undefined, relationContext)
+					const fieldPredicate = this.predicateFactory.buildPredicates(entity, [singlePredicate], relationContext)
+
+					this.qb = this.whereBuilder.buildAdvanced(
+						entity,
+						path.back(),
+						fieldPredicate,
+						apply => this.qb.select(expr =>
+							expr.selectCondition(condition => {
+								condition = apply(condition)
+								if (condition.isEmpty()) {
+									return condition.raw('true')
+								}
+								return condition
+							}),
+						predicatePath.alias,
+						),
+						{ relationPath: this.relationPath, evaluatedPredicates: [primaryPredicate] },
+					)
+					predicateAliasMap.set(singlePredicate, predicateAlias)
+				}
 			}
-			return row => row[predicatePath.alias] === true
+			return row => aliases.some(alias => row[alias] === true)
 		}
 
 		for (let field of input.fields) {
@@ -136,6 +145,7 @@ export class SelectBuilder {
 			const executionContext: SelectExecutionHandlerContext = {
 				mapper,
 				relationPath: this.relationPath,
+				through: this.relationPath[this.relationPath.length - 1].targetRelation?.name ?? (this.relationPath.length > 0 ? ThroughAnyRelation : ThroughRoot),
 				addData: async ({ field, dataProvider, defaultValue, predicate }) => {
 					if (predicate === false) {
 						this.hydrator.addPromise(fieldPath, path.for(field), Promise.resolve({}), defaultValue ?? null)

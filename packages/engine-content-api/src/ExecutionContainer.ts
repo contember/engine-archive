@@ -37,10 +37,12 @@ import { GraphQlQueryAstFactory, MutationResolver, ReadResolver, ValidationResol
 import {
 	ColumnValueResolver,
 	DependencyCollector,
-	EntityRulesResolver, InputPreValidator,
+	EntityRulesResolver,
+	InputPreValidator,
 	QueryAstFactory,
 	ValidationDataSelector,
 } from './input-validation'
+import { Permissions } from './acl'
 
 export type ExecutionContainerArgs = {
 	schema: Schema & { id: number }
@@ -48,7 +50,7 @@ export type ExecutionContainerArgs = {
 	db: Client
 	identityId: string
 	identityVariables: Acl.VariablesMap
-	permissions: Acl.Permissions
+	permissions: Permissions
 	systemSchema: string
 	project: { slug: string }
 	stage: { id: string; slug: string }
@@ -119,10 +121,10 @@ export class ExecutionContainerFactory {
 				new OrderByBuilder(schema.model, joinBuilder))
 			.addService('relationFetcher', ({ whereBuilder, orderByBuilder, predicatesInjector, pathFactory }) =>
 				new RelationFetcher(whereBuilder, orderByBuilder, predicatesInjector, pathFactory))
-			.addService('fieldsVisitorFactory', ({ relationFetcher, predicateFactory, schema }) =>
-				new FieldsVisitorFactory(relationFetcher, predicateFactory, schema.settings.content ?? {}))
-			.addService('metaHandler', ({ whereBuilder, predicateFactory }) =>
-				new MetaHandler(whereBuilder, predicateFactory))
+			.addService('fieldsVisitorFactory', ({ relationFetcher, schema }) =>
+				new FieldsVisitorFactory(relationFetcher, permissions, schema.settings.content ?? {}))
+			.addService('metaHandler', ({ whereBuilder }) =>
+				new MetaHandler(whereBuilder, permissions))
 			.addService('uniqueWhereExpander', ({ schema }) =>
 				new UniqueWhereExpander(schema.model))
 			.addService('hasManyToHasOneReducer', ({ uniqueWhereExpander, schema }) =>

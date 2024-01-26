@@ -1,17 +1,27 @@
 import { Acl, Model } from '@contember/schema'
-import { Authorizator } from '../acl'
+import { Permissions, ThroughUnknown } from '../acl'
 
 export class FieldAccessVisitor implements Model.ColumnVisitor<boolean>, Model.RelationVisitor<boolean> {
 	constructor(
 		private readonly operation: Acl.Operation.create | Acl.Operation.read | Acl.Operation.update,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
+		// todo: not sure if it does not require specific ThroughRelation per use case
 	) {}
 
 	visitColumn({ column, entity }: Model.ColumnContext) {
-		return this.authorizator.getFieldPermissions(this.operation, entity.name, column.name) !== 'no'
+		return this.permissions.canPossiblyAccessField({
+			operation: this.operation,
+			entity: entity.name,
+			field: column.name,
+			through: ThroughUnknown,
+		})
 	}
 
 	visitRelation({ targetEntity }: Model.AnyRelationContext) {
-		return this.authorizator.getEntityPermission(this.operation, targetEntity.name) !== 'no'
+		return this.permissions.canPossiblyAccessEntity({
+			operation: this.operation,
+			entity: targetEntity.name,
+			through: ThroughUnknown,
+		})
 	}
 }

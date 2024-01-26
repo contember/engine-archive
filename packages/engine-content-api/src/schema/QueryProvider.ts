@@ -3,15 +3,15 @@ import { Acl, Input, Model } from '@contember/schema'
 import { Context } from '../types'
 import { EntityTypeProvider } from './EntityTypeProvider'
 import { WhereTypeProvider } from './WhereTypeProvider'
-import { Authorizator } from '../acl'
 import { OrderByTypeProvider } from './OrderByTypeProvider'
 import { ExtensionKey, Operation, OperationMeta } from './OperationExtension'
 import { ImplementationException } from '../exception'
 import { PaginatedFieldConfigFactory } from './PaginatedFieldConfigFactory'
+import { Permissions, ThroughRoot } from '../acl'
 
 export class QueryProvider {
 	constructor(
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly whereTypeProvider: WhereTypeProvider,
 		private readonly orderByTypeProvider: OrderByTypeProvider,
 		private readonly entityTypeProvider: EntityTypeProvider,
@@ -19,7 +19,11 @@ export class QueryProvider {
 	) {}
 
 	public getQueries(entity: Model.Entity): { [fieldName: string]: GraphQLFieldConfig<any, Context, any> } {
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, entity.name) === 'no') {
+		if (this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.read,
+			entity: entity.name,
+			through: ThroughRoot,
+		})) {
 			return {}
 		}
 		return {

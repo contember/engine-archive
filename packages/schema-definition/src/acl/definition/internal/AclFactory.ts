@@ -100,7 +100,7 @@ export class AclFactory {
 				rolePermissions.set(name, entityPermissions)
 				return entityPermissions
 			}
-			const metadata: EntityPermissionsDefinition[] = allowDefinitionsStore.get(entity)
+			const metadata = allowDefinitionsStore.get(entity)
 			for (const { role, ...definition } of metadata) {
 				if (!roles.includes(role)) {
 					throw `Role ${role.name} used on entity ${name} is not registered. Have you exported it?`

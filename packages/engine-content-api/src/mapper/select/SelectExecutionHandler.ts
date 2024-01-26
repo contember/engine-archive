@@ -4,6 +4,7 @@ import { ColumnValueGetter, SelectNestedData, SelectNestedDefaultValue, SelectRo
 import { SelectBuilder } from '@contember/database'
 import { Mapper } from '../Mapper'
 import { FieldNode, ObjectNode } from '../../inputProcessing'
+import { PermissionsThroughKey } from '../../acl'
 
 export interface SelectExecutionHandler<
 	FieldArgs = unknown,
@@ -22,9 +23,10 @@ export type SelectExecutionHandlerContext<
 	path: Path
 	entity: Model.Entity
 	relationPath: Model.AnyRelationContext[]
-	addPredicate: (predicate: Acl.Predicate) => (row: SelectRow) => boolean
+	through: PermissionsThroughKey
+	addPredicate: (predicate: boolean | Acl.PredicateDefinition[]) => (row: SelectRow) => boolean
 	addColumn: (args: {
-		predicate?: Acl.Predicate
+		predicate?: boolean | Acl.PredicateDefinition[]
 		query?: (qb: SelectBuilder<SelectBuilder.Result>) => SelectBuilder<SelectBuilder.Result>
 		path?: Path
 		valueGetter?: ColumnValueGetter
@@ -32,7 +34,7 @@ export type SelectExecutionHandlerContext<
 	addData: (args: {
 		field: string
 		dataProvider: DataCallback
-		predicate?: Acl.Predicate
+		predicate?: boolean | Acl.PredicateDefinition[]
 		defaultValue?: SelectNestedDefaultValue
 	}) => void
 } & (

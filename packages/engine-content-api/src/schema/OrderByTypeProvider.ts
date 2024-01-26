@@ -11,8 +11,8 @@ import { Acl, Model } from '@contember/schema'
 import { acceptFieldVisitor } from '@contember/schema-utils'
 import { singletonFactory } from '../utils'
 import { GqlTypeName } from './utils'
-import { Authorizator } from '../acl'
 import { FieldAccessVisitor } from './FieldAccessVisitor'
+import { Permissions } from '../acl'
 
 export class OrderByTypeProvider {
 	private orderBySingleton = singletonFactory(name => this.createEntityOrderByType(name))
@@ -27,7 +27,10 @@ export class OrderByTypeProvider {
 		},
 	})
 
-	constructor(private readonly schema: Model.Schema, private readonly authorizator: Authorizator) {}
+	constructor(
+		private readonly schema: Model.Schema,
+		private readonly permissions: Permissions,
+	) {}
 
 	public getEntityOrderByType(entityName: string): GraphQLInputType {
 		return this.orderBySingleton(entityName)
@@ -51,7 +54,7 @@ export class OrderByTypeProvider {
 			if (!entity.fields.hasOwnProperty(fieldName)) {
 				continue
 			}
-			const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.authorizator)
+			const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.permissions)
 			if (!acceptFieldVisitor(this.schema, name, fieldName, accessVisitor)) {
 				continue
 			}

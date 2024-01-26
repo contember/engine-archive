@@ -1,64 +1,17 @@
 import { Acl, Input, Model } from '@contember/schema'
 import { VariableInjector } from './VariableInjector'
 import { EvaluatedPredicateReplacer } from './EvaluatedPredicateReplacer'
+import { FieldLevelAccessSpecification, Permissions } from './Permissions'
 
 const getRowLevelPredicatePseudoField = (entity: Model.Entity) => entity.primary
 
-export interface FieldRequiredPredicate {
-	predicate: Acl.Predicate
-	isSameAsPrimary: boolean
-}
-
 export class PredicateFactory {
 	constructor(
-		private readonly permissions: Acl.Permissions,
+		private readonly permissions: Permissions,
 		private readonly model: Model.Schema,
 		private readonly variableInjector: VariableInjector,
 	) {}
 
-	public getFieldPredicate(
-		entity: Model.Entity,
-		operation: Acl.Operation.update | Acl.Operation.read | Acl.Operation.create,
-		fieldName: string,
-	): FieldRequiredPredicate {
-		const permissions = this.permissions[entity.name]?.operations?.[operation]
-		const predicate = permissions?.[fieldName] ?? false
-		const rowLevelField = getRowLevelPredicatePseudoField(entity)
-
-		const primaryPredicate = permissions?.[rowLevelField] ?? false
-		const isSameAsPrimary = predicate === primaryPredicate
-
-		return {
-			isSameAsPrimary,
-			predicate,
-		}
-	}
-
-	public shouldApplyCellLevelPredicate(
-		entity: Model.Entity,
-		operation: Acl.Operation.read,
-		fieldName: string,
-	): boolean {
-		const rowLevelField = getRowLevelPredicatePseudoField(entity)
-		const permissions = this.permissions[entity.name]?.operations?.[operation]
-		return permissions?.[fieldName] !== permissions?.[rowLevelField]
-	}
-
-	public createDeletePredicate(entity: Model.Entity) {
-		const neverCondition: Input.Where = { [entity.primary]: { never: true } }
-		const entityPermissions = this.permissions[entity.name]
-		if (!entityPermissions) {
-			return neverCondition
-		}
-		const deletePredicate = entityPermissions.operations.delete
-		if (deletePredicate === undefined || deletePredicate === false) {
-			return neverCondition
-		}
-		if (deletePredicate === true) {
-			return {}
-		}
-		return this.buildPredicates(entity, [deletePredicate])
-	}
 
 	public create(
 		entity: Model.Entity,
@@ -88,15 +41,10 @@ export class PredicateFactory {
 		return this.buildPredicates(entity, operationPredicates, relationContext)
 	}
 
-	public buildPredicates(entity: Model.Entity, predicates: Acl.PredicateReference[], relationContext?: Model.AnyRelationContext): Input.OptionalWhere {
-		const entityPermissions: Acl.EntityPermissions = this.permissions[entity.name] ?? {}
-
+	public buildPredicates(entity: Model.Entity, predicates: Acl.PredicateDefinition[], relationContext?: Model.AnyRelationContext): Input.OptionalWhere {
 		const predicatesWhere: Input.Where[] = predicates.reduce(
-			(result: Input.Where[], name: Acl.PredicateReference): Input.Where[] => {
-				if (!entityPermissions.predicates[name]) {
-					throw new Error(`${entity.name}: Undefined predicate ${name}`)
-				}
-				const predicateWhere: Input.Where = this.variableInjector.inject(entity, entityPermissions.predicates[name])
+			(result: Input.Where[], predicate: Acl.PredicateDefinition): Input.Where[] => {
+				const predicateWhere: Input.Where = this.variableInjector.inject(entity, predicate)
 				return [...result, predicateWhere]
 			},
 			[],

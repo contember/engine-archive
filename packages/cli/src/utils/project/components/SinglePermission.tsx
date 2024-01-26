@@ -8,6 +8,9 @@ export const SinglePermission = ({ predicate, value }: { predicate?: Acl.Predica
 	if (predicate === true) {
 		return <span class={'bg-green-600 text-white font-semibold px-0.5'}>{value}</span>
 	}
+	if (typeof predicate !== 'string') {
+		return <span class={'bg-yellow-600 text-white font-semibold px-0.5'} title={'Complex predicate'}>{value}</span>
+	}
 	return <span class={'bg-yellow-400 text-black font-semibold px-0.5'} title={predicate}>{value}</span>
 }
 

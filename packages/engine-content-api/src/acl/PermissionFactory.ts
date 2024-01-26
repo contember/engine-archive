@@ -1,30 +1,39 @@
-import { Acl, Model, Schema, Writable } from '@contember/schema'
+import { Acl, Model, Schema } from '@contember/schema'
 import { getEntity, PredicateDefinitionProcessor } from '@contember/schema-utils'
 import { mapObject } from '../utils'
 import { prefixVariable } from './VariableUtils'
+import {
+	ResolvedEntityOperations,
+	ResolvedEntityPermissions,
+	ResolvedFieldPermissions,
+	Permissions,
+	ResolvedPredicates,
+	ThroughAnyRelation,
+	ThroughRoot, ThroughUnknown, ResolvedPermissions, PermissionsThroughKey,
+} from './Permissions'
 
 export interface Identity {
 	projectRoles: readonly string[]
 }
 
 export class PermissionFactory {
-	public create(schema: Schema, roles: readonly string[], prefix?: string): Acl.Permissions {
-		let result: Acl.Permissions = {}
+	public create(schema: Schema, roles: readonly string[], prefix?: string): ResolvedPermissions {
+		let result: ResolvedPermissions = {}
 		for (let role of roles) {
 			const roleDefinition = schema.acl.roles[role] || { entities: {} }
-			let rolePermissions: Acl.Permissions = this.prefixPredicatesWithRole(schema.model, roleDefinition.entities, prefix || role)
+			const prefixedVariables = this.prefixPredicateVariables(schema.model, roleDefinition.entities, prefix || role)
+			result = this.mergePermissions(result, this.resolvePredicates(schema.model, prefixedVariables))
 			if (roleDefinition.inherits) {
 				const inheritedPermissions = this.create(schema, roleDefinition.inherits, prefix || role)
-				rolePermissions = this.mergePermissions(inheritedPermissions, rolePermissions)
+				result = this.mergePermissions(result, inheritedPermissions)
 			}
-			result = this.mergePermissions(result, rolePermissions)
 		}
 		result = this.makePrimaryPredicatesUnionOfAllFields(schema.model, result)
 
 		return result
 	}
 
-	private prefixPredicatesWithRole(model: Model.Schema, permissions: Acl.Permissions, role: string): Acl.Permissions {
+	private prefixPredicateVariables(model: Model.Schema, permissions: Acl.Permissions, role: string): Acl.Permissions {
 		return mapObject(permissions, ({ operations, predicates }, entityName) => ({
 			operations,
 			predicates: mapObject(predicates, predicate => {
@@ -47,58 +56,102 @@ export class PermissionFactory {
 		}))
 	}
 
-	private makePrimaryPredicatesUnionOfAllFields(model: Model.Schema, permissions: Acl.Permissions): Acl.Permissions {
-		return mapObject(permissions, (permission, entityName): Acl.EntityPermissions => {
+	private resolvePredicates(model: Model.Schema, permissions: Acl.Permissions): ResolvedPermissions {
+		return mapObject(permissions, (entityPermissions, entityName): ResolvedEntityPermissions => {
+			const resolvedOperations: ResolvedEntityOperations = {}
+
+			if (entityPermissions.operations.customPrimary) {
+				resolvedOperations.customPrimary = true
+			}
+
+			const operationNames = ['read', 'create', 'update'] as const
+			for (let operation of operationNames) {
+				const operations = entityPermissions.operations[operation]
+				if (!operations) {
+					continue
+				}
+				const fieldPermissions: ResolvedFieldPermissions = {}
+
+				for (let field in operations) {
+					const fieldPermission = operations[field]
+					const resolvedFieldPermissions = this.resolvePredicate(entityPermissions.predicates, fieldPermission)
+					fieldPermissions[field] = resolvedFieldPermissions
+				}
+				resolvedOperations[operation] = fieldPermissions
+			}
+
+			const deletePermission = entityPermissions.operations.delete
+			if (deletePermission) {
+				const resolvedDeletePredicate = this.resolvePredicate(entityPermissions.predicates, deletePermission)
+				resolvedOperations.delete = resolvedDeletePredicate
+			}
+
+			return {
+				operations: resolvedOperations,
+			}
+		})
+	}
+
+	private resolvePredicate(predicates: Acl.PredicateMap, predicate: Acl.Predicate): ResolvedPredicates {
+		if (typeof predicate === 'string') {
+			return {
+				[ThroughRoot]: [predicates[predicate]],
+			}
+		} else if (predicate === true) {
+			return { [ThroughRoot]: true }
+		} else if (predicate) {
+			const resolvedPredicates: ResolvedPredicates = {}
+			for (const richPredicate of predicate) {
+				const through = (!richPredicate.through
+					? [ThroughRoot]
+					: richPredicate.through === true ? [ThroughAnyRelation] : richPredicate.through) as PermissionsThroughKey[]
+
+				for (const throughRelation of through) {
+					const thisPredicates = resolvedPredicates[throughRelation] ?? []
+					if (thisPredicates === true) {
+						continue
+					}
+					if (richPredicate.predicate === true) {
+						resolvedPredicates[throughRelation] = true
+					} else if (typeof richPredicate.predicate === 'string') {
+						resolvedPredicates[throughRelation] = thisPredicates
+						thisPredicates.push(predicates[richPredicate.predicate])
+					}
+				}
+			}
+
+			return resolvedPredicates
+		}
+		return {}
+	}
+
+	private makePrimaryPredicatesUnionOfAllFields(model: Model.Schema, permissions: ResolvedPermissions): ResolvedPermissions {
+		return mapObject(permissions, (permission, entityName): ResolvedEntityPermissions => {
 			const entity = getEntity(model, entityName)
-			const entityPredicates: Writable<Acl.PredicateMap> = { ...permission.predicates }
-			const entityOperations: Writable<Acl.EntityOperations> = { ...permission.operations }
+			const entityOperations: ResolvedEntityOperations = { ...permission.operations }
 
 			const operationNames = ['read', 'create', 'update'] as const
 			for (let operation of operationNames) {
 				if (!entityOperations[operation]) {
 					continue
 				}
-				const fieldPermissions: Writable<Acl.FieldPermissions> = { ...entityOperations[operation] }
+				const fieldPermissions: ResolvedFieldPermissions = { ...entityOperations[operation] }
 				entityOperations[operation] = fieldPermissions
 
-				if (Object.values(fieldPermissions).some(it => it === true)) {
-					fieldPermissions[entity.primary] = true
-				}
-				if (fieldPermissions[entity.primary] === true) {
-					continue
-				}
-				const predicateReferences: string[] = Object.entries(fieldPermissions)
-					.filter(([key]) => key !== entity.primary)
-					.map(([key, value]) => value)
-					.filter(value => value !== false)
-					.filter((value, index, array): value is string => array.indexOf(value) === index)
+				let idPermissions: ResolvedPredicates = {}
 
-				let idPermissions: Acl.Predicate = fieldPermissions[entity.primary] || false
-
-				for (let predicateReference of predicateReferences) {
-					const [predicateDefinition, predicate] = this.mergePredicates(
-						entityPredicates,
-						idPermissions,
-						entityPredicates,
-						predicateReference,
-					)
-					if (typeof predicate !== 'string' || predicateDefinition === undefined) {
-						throw new Error('should not happen')
-					}
-					idPermissions = predicate
-					entityPredicates[predicate] = predicateDefinition
+				for (const field of Object.values(fieldPermissions)) {
+					idPermissions = this.mergePredicates(idPermissions, field)
 				}
 				fieldPermissions[entity.primary] = idPermissions
-				entityPredicates[idPermissions as Acl.PredicateReference] = entityPredicates[idPermissions as Acl.PredicateReference]
 			}
 			return {
 				operations: entityOperations,
-				predicates: entityPredicates,
 			}
 		})
 	}
 
-	private mergePermissions(left: Acl.Permissions, right: Acl.Permissions): Acl.Permissions {
+	private mergePermissions(left: ResolvedPermissions, right: ResolvedPermissions): ResolvedPermissions {
 		const result = { ...left }
 		for (let entityName in right) {
 			if (result[entityName] !== undefined) {
@@ -110,119 +163,87 @@ export class PermissionFactory {
 		return result
 	}
 
-	private mergeEntityPermissions(left: Acl.EntityPermissions, right: Acl.EntityPermissions): Acl.EntityPermissions {
-		let predicates: Writable<Acl.PredicateMap> = {}
-		const operations: Writable<Acl.EntityOperations> = {}
+	private mergeEntityPermissions(left: ResolvedEntityPermissions, right: ResolvedEntityPermissions): ResolvedEntityPermissions {
+		const operations: ResolvedEntityOperations = {}
 		if (left.operations.customPrimary || right.operations.customPrimary) {
 			operations.customPrimary = true
 		}
 
-		const operationNames: (keyof Pick<Acl.EntityOperations, 'create' | 'read' | 'update'>)[] = [
-			'create',
-			'read',
-			'update',
-		]
+		const operationNames = ['create', 'read', 'update'] as const
 
 		for (let operation of operationNames) {
-			const leftFieldPermissions: Acl.FieldPermissions = left.operations[operation] || {}
-			const rightFieldPermissions: Acl.FieldPermissions = right.operations[operation] || {}
-			const [operationPredicates, fieldPermissions] = this.mergeFieldPermissions(
-				left.predicates,
+			const leftFieldPermissions = left.operations[operation] || {}
+			const rightFieldPermissions = right.operations[operation] || {}
+
+			const fieldPermissions = this.mergeFieldPermissions(
 				leftFieldPermissions,
-				right.predicates,
 				rightFieldPermissions,
 			)
-			predicates = { ...predicates, ...operationPredicates }
 			if (Object.keys(fieldPermissions).length > 0) {
 				operations[operation] = fieldPermissions
 			}
 		}
 
-		const [predicateDefinition, predicate] = this.mergePredicates(
-			left.predicates,
-			left.operations.delete || false,
-			right.predicates,
-			right.operations.delete || false,
+		const predicate = this.mergePredicates(
+			left.operations.delete || {},
+			right.operations.delete || {},
 		)
-		if (predicate === true) {
-			operations.delete = true
-		} else if (predicateDefinition !== undefined && typeof predicate === 'string') {
-			predicates[predicate] = predicateDefinition
-			operations.delete = predicate
-		}
+		operations.delete = predicate
 
 		return {
-			predicates: predicates,
 			operations: operations,
 		}
 	}
 
 	private mergeFieldPermissions(
-		leftPredicates: Acl.PredicateMap,
-		leftFieldPermissions: Acl.FieldPermissions,
-		rightPredicates: Acl.PredicateMap,
-		rightFieldPermissions: Acl.FieldPermissions,
-	): [Acl.PredicateMap, Acl.FieldPermissions] {
-		const fields: Writable<Acl.FieldPermissions> = {}
-		const predicates: Writable<Acl.PredicateMap> = {}
+		leftFieldPermissions: ResolvedFieldPermissions,
+		rightFieldPermissions: ResolvedFieldPermissions,
+	): ResolvedFieldPermissions {
+		const fields: ResolvedFieldPermissions = {}
 
 		for (let field in { ...leftFieldPermissions, ...rightFieldPermissions }) {
-			const [predicateDefinition, predicate] = this.mergePredicates(
-				leftPredicates,
-				leftFieldPermissions[field] || false,
-				rightPredicates,
-				rightFieldPermissions[field] || false,
+			const predicates = this.mergePredicates(
+				leftFieldPermissions[field] ?? [],
+				rightFieldPermissions[field] ?? [],
 			)
-			if (predicate === true) {
-				fields[field] = true
-			} else if (predicateDefinition !== undefined && typeof predicate === 'string') {
-				fields[field] = predicate
-				predicates[predicate] = predicateDefinition
-			}
+			fields[field] = predicates
 		}
 
-		return [predicates, fields]
+		return fields
 	}
 
 	private mergePredicates(
-		leftPredicates: Acl.PredicateMap,
-		leftReference: Acl.Predicate,
-		rightPredicates: Acl.PredicateMap,
-		rightReference: Acl.Predicate,
-	): [Acl.PredicateDefinition, Acl.PredicateReference] | [undefined, boolean] {
-		if (leftReference === true || rightReference === true) {
-			return [undefined, true]
+		leftPredicates: ResolvedPredicates,
+		rightPredicates: ResolvedPredicates,
+	): ResolvedPredicates {
+		const newPredicates: ResolvedPredicates = { ...leftPredicates }
+
+		for (const [rightPredicateKey, rightPredicate] of Object.entries(rightPredicates)) {
+			if (!rightPredicate) {
+				continue
+			}
+			const leftPredicate = leftPredicates[rightPredicateKey]
+			if (leftPredicate === true || rightPredicate === true) {
+				newPredicates[rightPredicateKey] = true
+				newPredicates[ThroughUnknown] = true
+				continue
+			}
+
+			const newMissingPredicates = rightPredicate.filter(it => !leftPredicate?.includes(it))
+			newPredicates[rightPredicateKey] = [...(leftPredicate ?? []), ...newMissingPredicates]
 		}
 
-		if (leftReference !== false && rightReference !== false) {
-			const leftPredicate: Acl.PredicateDefinition = leftPredicates[leftReference]
-			const rightPredicate: Acl.PredicateDefinition = rightPredicates[rightReference]
-			if (leftPredicate === rightPredicate) {
-				return [leftPredicate, leftReference]
-			}
-
-			let predicateName = '__merge__' + leftReference + '__' + rightReference
-			while (leftPredicates[predicateName]) {
-				predicateName += '_'
-			}
-			return [
-				{
-					or: [leftPredicate, rightPredicate],
-				} as Acl.PredicateDefinition,
-				predicateName,
-			]
-		} else if (leftReference !== false) {
-			return [leftPredicates[leftReference], leftReference]
-		} else if (rightReference !== false) {
-			let predicateName = rightReference
-			if (rightPredicates !== leftPredicates) {
-				while (leftPredicates[predicateName]) {
-					predicateName += '_'
+		if (newPredicates[ThroughUnknown] !== true) {
+			for (const newPredicate of Object.values(newPredicates)) {
+				if (newPredicate === true || newPredicate === undefined) {
+					continue
 				}
+				const unknownPredicates = (newPredicates[ThroughUnknown] ??= []) as Acl.PredicateDefinition[]
+				const newMissingPredicates = newPredicate.filter(it => !unknownPredicates.includes(it))
+				unknownPredicates.push(...newMissingPredicates)
 			}
-			return [rightPredicates[rightReference], predicateName]
-		} else {
-			return [undefined, false]
 		}
+
+		return newPredicates
 	}
 }

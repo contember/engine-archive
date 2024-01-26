@@ -77,7 +77,11 @@ export namespace Acl {
 	export type FieldPermissions = { readonly [field: string]: Predicate }
 
 	export type PredicateReference = string
-	export type Predicate = PredicateReference | boolean
+	export type RichPredicate = {
+		readonly predicate: PredicateReference | true
+		readonly through?: (readonly string[]) | true
+	}
+	export type Predicate = PredicateReference | boolean | readonly RichPredicate[]
 
 	export type AnyStage = '*'
 	export type StagesDefinition = AnyStage | readonly string[]

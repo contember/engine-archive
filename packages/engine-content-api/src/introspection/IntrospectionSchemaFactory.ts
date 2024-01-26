@@ -1,9 +1,9 @@
 import { Acl, Model, Validation } from '@contember/schema'
 import { EntityRulesResolver } from '../input-validation'
-import { Authorizator } from '../acl'
 import * as ContentSchema from './content-schema.types'
 import { assertNever } from '../utils'
 import { acceptEveryFieldVisitor, getEntity } from '@contember/schema-utils'
+import { Permissions, ThroughUnknown } from '../acl/Permissions'
 
 type AdditionalFieldInfo =
 	| Omit<ContentSchema._Relation, 'name' | 'type' | 'rules' | 'validators'>
@@ -13,7 +13,7 @@ export class IntrospectionSchemaFactory {
 	constructor(
 		private readonly model: Model.Schema,
 		private readonly rulesResolver: EntityRulesResolver,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 	) {}
 
 	createFieldsSchema(entityName: string): readonly (ContentSchema._Column | ContentSchema._Relation)[] {
@@ -107,7 +107,12 @@ export class IntrospectionSchemaFactory {
 			},
 		})
 		return Object.values(getEntity(this.model, entityName).fields)
-			.filter(it => this.authorizator.getFieldPermissions(Acl.Operation.read, entityName, it.name) !== 'no')
+			.filter(it => this.permissions.canPossiblyAccessField({
+				operation: Acl.Operation.read,
+				entity: entityName,
+				field: it.name,
+				through: ThroughUnknown,
+			}))
 			.map((it): ContentSchema._Column | ContentSchema._Relation => ({
 				...additionalInfo[it.name],
 				name: it.name,
@@ -154,10 +159,14 @@ export class IntrospectionSchemaFactory {
 
 	public create(): ContentSchema._Schema {
 		const entities = Object.values(this.model.entities)
-			.filter(it => this.authorizator.getEntityPermission(Acl.Operation.read, it.name) !== 'no')
+			.filter(it => this.permissions.canPossiblyAccessEntity({
+				operation: Acl.Operation.read,
+				entity: it.name,
+				through: ThroughUnknown,
+			}))
 			.map(entity => ({
 				name: entity.name,
-				customPrimaryAllowed: this.authorizator.isCustomPrimaryAllowed(entity.name),
+				customPrimaryAllowed: this.permissions.isCustomPrimaryAllowed(entity.name),
 				fields: this.createFieldsSchema(entity.name),
 				unique: Object.values(entity.unique).map(({ fields }) => ({ fields })),
 			}))

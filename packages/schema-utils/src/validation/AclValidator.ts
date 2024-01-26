@@ -197,8 +197,14 @@ export class AclValidator {
 		if (predicate === false || predicate === true) {
 			return
 		}
-		if (!predicates[predicate]) {
-			errorBuilder.add('ACL_UNDEFINED_PREDICATE', `Predicate ${predicate} not found`)
+
+		const predicateNames = typeof predicate === 'string'
+			? [predicate]
+			: predicate.map(it => it.predicate).filter(<T>(it: T | undefined): it is T => it !== undefined)
+		for (const predicateName of predicateNames) {
+			if (typeof predicateName === 'string' && !predicates[predicateName]) {
+				errorBuilder.add('ACL_UNDEFINED_PREDICATE', `Predicate ${predicateName} not found`)
+			}
 		}
 	}
 }

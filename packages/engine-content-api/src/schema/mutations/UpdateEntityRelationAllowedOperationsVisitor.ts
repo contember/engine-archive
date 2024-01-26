@@ -1,30 +1,32 @@
 import { Acl, Input, Model } from '@contember/schema'
-import { Authorizator } from '../../acl'
+import { Permissions, ThroughAnyRelation } from '../../acl'
 
 export class UpdateEntityRelationAllowedOperationsVisitor implements
 	Model.ColumnVisitor<never>,
 	Model.RelationByTypeVisitor<Input.UpdateRelationOperation[]> {
 
-	constructor(private readonly authorizator: Authorizator) {}
+	constructor(
+		private readonly permissions: Permissions,
+	) {}
 
 	visitColumn(): never {
 		throw new Error('UpdateEntityRelationAllowedOperationsVisitor: Not applicable for a column')
 	}
 
 	public visitManyHasManyInverse({ targetEntity, targetRelation }: Model.ManyHasManyInverseContext) {
-		return this.getAllowedOperations(targetEntity, targetEntity, targetRelation)
+		return this.getAllowedOperations(targetEntity, targetEntity, targetRelation, targetRelation)
 	}
 
-	public visitManyHasManyOwning({ entity, targetEntity, relation }: Model.ManyHasManyOwningContext) {
-		return this.getAllowedOperations(targetEntity, entity, relation)
+	public visitManyHasManyOwning({ entity, targetEntity, relation, targetRelation }: Model.ManyHasManyOwningContext) {
+		return this.getAllowedOperations(targetEntity, entity, relation, targetRelation)
 	}
 
 	public visitOneHasMany({ targetRelation, targetEntity }: Model.OneHasManyContext) {
-		return this.getAllowedOperations(targetEntity, targetEntity, targetRelation)
+		return this.getAllowedOperations(targetEntity, targetEntity, targetRelation, targetRelation)
 	}
 
-	public visitManyHasOne({ targetEntity, relation, entity }: Model.ManyHasOneContext) {
-		const operations = this.getAllowedOperations(targetEntity, entity, relation)
+	public visitManyHasOne({ targetEntity, relation, entity, targetRelation }: Model.ManyHasOneContext) {
+		const operations = this.getAllowedOperations(targetEntity, entity, relation, targetRelation)
 		if (relation.nullable) {
 			return operations
 		}
@@ -36,7 +38,7 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 	}
 
 	public visitOneHasOneInverse({ relation, targetEntity, targetRelation }: Model.OneHasOneInverseContext) {
-		const operations = this.getAllowedOperations(targetEntity, targetEntity, targetRelation)
+		const operations = this.getAllowedOperations(targetEntity, targetEntity, targetRelation, targetRelation)
 		if (relation.nullable || targetRelation.nullable) {
 			return operations
 		}
@@ -44,7 +46,7 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 	}
 
 	public visitOneHasOneOwning({ targetEntity, entity, relation, targetRelation }: Model.OneHasOneOwningContext) {
-		const operations = this.getAllowedOperations(targetEntity, entity, relation)
+		const operations = this.getAllowedOperations(targetEntity, entity, relation, targetRelation)
 		if (relation.nullable || !targetRelation || targetRelation.nullable) {
 			return operations
 		}
@@ -59,14 +61,16 @@ export class UpdateEntityRelationAllowedOperationsVisitor implements
 		targetEntity: Model.Entity,
 		owningEntity: Model.Entity,
 		owningRelation: Model.Relation,
+		targetRelation: Model.Relation | null,
 	): Input.UpdateRelationOperation[] {
 		const result: Input.UpdateRelationOperation[] = []
 
-		const canReadTargetEntity = this.authorizator.getEntityPermission(Acl.Operation.read, targetEntity.name) !== 'no'
-		const canCreateTargetEntity = this.authorizator.getEntityPermission(Acl.Operation.create, targetEntity.name) !== 'no'
-		const canUpdateTargetEntity = this.authorizator.getEntityPermission(Acl.Operation.update, targetEntity.name) !== 'no'
-		const canDeleteTargetEntity = this.authorizator.getEntityPermission(Acl.Operation.delete, targetEntity.name) !== 'no'
-		const canUpdateOwningRelation = this.authorizator.getFieldPermissions(Acl.Operation.update, owningEntity.name, owningRelation.name) !== 'no'
+		const through = targetRelation?.name ?? ThroughAnyRelation
+		const canReadTargetEntity = this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.read, entity: targetEntity.name, through })
+		const canCreateTargetEntity = this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.create, entity: targetEntity.name, through })
+		const canUpdateTargetEntity = this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.update, entity: targetEntity.name, through })
+		const canDeleteTargetEntity = this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.delete, entity: targetEntity.name, through })
+		const canUpdateOwningRelation = this.permissions.canPossiblyAccessField({ operation: Acl.Operation.update, entity: owningEntity.name, field: owningRelation.name, through })
 
 		if (canReadTargetEntity && canUpdateOwningRelation) {
 			result.push(Input.UpdateRelationOperation.connect)

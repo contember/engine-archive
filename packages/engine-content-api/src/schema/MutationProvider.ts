@@ -1,27 +1,20 @@
-import {
-	GraphQLBoolean,
-	GraphQLFieldConfig,
-	GraphQLNonNull,
-	GraphQLObjectType,
-	GraphQLObjectTypeConfig,
-	GraphQLString,
-} from 'graphql'
+import { GraphQLBoolean, GraphQLFieldConfig, GraphQLNonNull, GraphQLObjectType, GraphQLObjectTypeConfig, GraphQLString } from 'graphql'
 import { Acl, Input, Model } from '@contember/schema'
 import { Context } from '../types'
 import { EntityTypeProvider } from './EntityTypeProvider'
 import { WhereTypeProvider } from './WhereTypeProvider'
-import { Authorizator } from '../acl'
 import { EntityInputProvider, EntityInputType } from './mutations'
 import { filterObject } from '../utils'
 import { aliasAwareResolver, GqlTypeName } from './utils'
 import { ResultSchemaTypeProvider } from './ResultSchemaTypeProvider'
 import { ExtensionKey, Operation, OperationMeta } from './OperationExtension'
+import { Permissions, ThroughRoot, ThroughUnknown } from '../acl'
 
 type FieldConfig<TArgs> = GraphQLFieldConfig<any, Context, TArgs>
 
 export class MutationProvider {
 	constructor(
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly whereTypeProvider: WhereTypeProvider,
 		private readonly entityTypeProvider: EntityTypeProvider,
 		private readonly createEntityInputProvider: EntityInputProvider<EntityInputType.create>,
@@ -42,6 +35,13 @@ export class MutationProvider {
 
 	protected getCreateMutation(entity: Model.Entity): FieldConfig<Input.CreateInput> | undefined {
 		const entityName = entity.name
+		if (this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.create,
+			entity: entityName,
+			through: ThroughRoot,
+		})) {
+			return undefined
+		}
 		const dataType = this.createEntityInputProvider.getInput(entityName)
 		if (dataType === undefined) {
 			return undefined
@@ -69,7 +69,11 @@ export class MutationProvider {
 		if (entity.view) {
 			return undefined
 		}
-		if (this.authorizator.getEntityPermission(Acl.Operation.delete, entityName) === 'no') {
+		if (!this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.delete,
+			entity: entityName,
+			through: ThroughRoot,
+		})) {
 			return undefined
 		}
 		const uniqueWhere = this.whereTypeProvider.getEntityUniqueWhereType(entityName)
@@ -100,6 +104,13 @@ export class MutationProvider {
 
 	protected getUpdateMutation(entity: Model.Entity): FieldConfig<Input.UpdateInput> | undefined {
 		const entityName = entity.name
+		if (!this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.update,
+			entity: entityName,
+			through: ThroughRoot,
+		})) {
+			return undefined
+		}
 		const dataType = this.updateEntityInputProvider.getInput(entityName)
 		if (dataType === undefined) {
 			return undefined
@@ -134,6 +145,20 @@ export class MutationProvider {
 
 	private getUpsertMutation(entity: Model.Entity): FieldConfig<Input.UpsertInput> | undefined {
 		const entityName = entity.name
+		if (!this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.update,
+			entity: entityName,
+			through: ThroughRoot,
+		})) {
+			return undefined
+		}
+		if (!this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.create,
+			entity: entityName,
+			through: ThroughRoot,
+		})) {
+			return undefined
+		}
 		const createInput = this.createEntityInputProvider.getInput(entityName)
 		if (createInput === undefined) {
 			return undefined
@@ -180,7 +205,11 @@ export class MutationProvider {
 			errorMessage: { type: GraphQLString },
 			errors: { type: this.resultSchemaTypeProvider.errorListResultType },
 		}
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, entityName) !== 'no') {
+		if (this.permissions.canPossiblyAccessEntity({
+			operation: Acl.Operation.read,
+			entity: entityName,
+			through: ThroughUnknown,
+		})) {
 			const nodeType = this.entityTypeProvider.getEntity(entityName)
 			fields.node = { type: nodeType, resolve: aliasAwareResolver }
 		}

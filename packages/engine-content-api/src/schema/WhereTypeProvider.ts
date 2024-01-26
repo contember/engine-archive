@@ -5,9 +5,9 @@ import { capitalizeFirstLetter, getFieldsForUniqueWhere, singletonFactory } from
 import { ColumnTypeResolver } from './ColumnTypeResolver'
 import { ConditionTypeProvider } from './ConditionTypeProvider'
 import { GqlTypeName } from './utils'
-import { Authorizator } from '../acl'
 import { FieldAccessVisitor } from './FieldAccessVisitor'
 import { ImplementationException } from '../exception'
+import { Permissions, ThroughUnknown } from '../acl'
 
 export class WhereTypeProvider {
 	private whereSingleton = singletonFactory(name => this.createEntityWhereType(name))
@@ -15,20 +15,20 @@ export class WhereTypeProvider {
 
 	constructor(
 		private readonly schema: Model.Schema,
-		private readonly authorizator: Authorizator,
+		private readonly permissions: Permissions,
 		private readonly columnTypeResolver: ColumnTypeResolver,
 		private readonly conditionTypeProvider: ConditionTypeProvider,
 	) {}
 
 	public getEntityWhereType(entityName: string): GraphQLInputObjectType {
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, entityName) === 'no') {
+		if (!this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.read, entity: entityName, through: ThroughUnknown })) {
 			throw new ImplementationException()
 		}
 		return this.whereSingleton(entityName)
 	}
 
 	public getEntityUniqueWhereType(entityName: string): undefined | GraphQLInputObjectType {
-		if (this.authorizator.getEntityPermission(Acl.Operation.read, entityName) === 'no') {
+		if (!this.permissions.canPossiblyAccessEntity({ operation: Acl.Operation.read, entity: entityName, through: ThroughUnknown })) {
 			return undefined
 		}
 		return this.uniqueWhereSingleton(entityName)
@@ -51,7 +51,7 @@ export class WhereTypeProvider {
 		const possibleUniqueWhereFields = getFieldsForUniqueWhere(this.schema, entity)
 		const uniqueKeys: (readonly string[])[] = possibleUniqueWhereFields.filter(uniqueKey =>
 			uniqueKey.every(it =>
-				acceptFieldVisitor(this.schema, entityName, it, new FieldAccessVisitor(Acl.Operation.read, this.authorizator)),
+				acceptFieldVisitor(this.schema, entityName, it, new FieldAccessVisitor(Acl.Operation.read, this.permissions)),
 			),
 		)
 		for (const uniqueKey of uniqueKeys) {
@@ -98,7 +98,7 @@ export class WhereTypeProvider {
 			if (!entity.fields.hasOwnProperty(fieldName)) {
 				continue
 			}
-			const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.authorizator)
+			const accessVisitor = new FieldAccessVisitor(Acl.Operation.read, this.permissions)
 			if (!acceptFieldVisitor(this.schema, name, fieldName, accessVisitor)) {
 				continue
 			}
