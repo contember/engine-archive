@@ -76,6 +76,53 @@ testMigrations('rename entity with one-has-one (constraint)', {
 	noDiff: true,
 })
 
+
+namespace RenameEntityWithOneHasManyOriginal {
+	export class Article {
+		name = c.stringColumn()
+		labels = c.manyHasMany(Label)
+	}
+
+	export class Label {
+		name = c.stringColumn()
+	}
+}
+
+namespace RenameEntityWithOneHasManyUpdated {
+	export class Article {
+		name = c.stringColumn()
+		labels = c.manyHasMany(Tag).joiningTable({
+			inverseJoiningColumn: {
+				columnName: 'label_id',
+				onDelete: Model.OnDelete.cascade,
+			},
+		})
+	}
+
+	export class Tag {
+		name = c.stringColumn()
+	}
+}
+
+testMigrations('rename entity + table name with many-has-many (joining table)', {
+	original: {
+		model: createSchema(RenameEntityWithOneHasManyOriginal).model,
+	},
+	updated: {
+		model: createSchema(RenameEntityWithOneHasManyUpdated).model,
+	},
+	diff: [
+		{
+			modification: 'updateEntityName',
+			entityName: 'Label',
+			newEntityName: 'Tag',
+			tableName: 'tag',
+		},
+	],
+	sql: SQL`ALTER TABLE "label" RENAME TO "tag";`,
+	noDiff: true,
+})
+
 testMigrations('rename table with acl', {
 	original: {
 		model: new SchemaBuilder()
