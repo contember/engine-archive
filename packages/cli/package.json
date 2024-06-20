@@ -2,12 +2,16 @@
   "name": "@contember/cli",
   "version": "1.4.0-rc.3",
   "license": "Apache-2.0",
+  "type": "module",
   "bin": {
     "contember": "./dist/src/run.js"
   },
   "scripts": {
-    "build": "tailwindcss -i ./src/utils/project/resources/style.css -o ./dist/src/utils/project/resources/out.css",
-    "test": "echo 'No tests'"
+    "build": "yarn build:js:dev && yarn build:js:prod && yarn build:css",
+    "build:css": "tailwindcss -i ./src/utils/project/resources/style.css -o ./dist/src/utils/project/resources/out.css",
+    "test": "echo 'No tests'",
+    "build:js:dev": "NODE_ENV=development vite build --mode development",
+    "build:js:prod": "vite build --mode production"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
@@ -42,5 +46,28 @@
     "prompts": "^2.4.2",
     "semver": "^7.5.4",
     "yawn-yaml": "^2.2.0"
-  }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "development": "./dist/development/index.js",
+        "production": "./dist/production/index.js",
+        "typescript": "./src/index.ts",
+        "default": "./dist/production/index.js"
+      },
+      "require": {
+        "types": "./dist/types/index.d.ts",
+        "development": "./dist/development/index.cjs",
+        "production": "./dist/production/index.cjs",
+        "default": "./dist/production/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist/",
+    "src/"
+  ],
+  "typings": "./dist/types/index.d.ts",
+  "main": "./dist/production/index.js"
 }

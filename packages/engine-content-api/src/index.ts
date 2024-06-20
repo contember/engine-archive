@@ -9,7 +9,6 @@ export * from './ExecutionContainer'
 export { graphql } from 'graphql'
 export { UserError } from './exception'
 export {
-	DataModificationEvent,
 	AfterCommitEvent,
 	AfterInsertEvent,
 	AfterJunctionUpdateEvent,
@@ -22,12 +21,15 @@ export {
 	EventManager,
 	Mapper,
 	MapperFactory,
-	ExecutionContainer,
-	ExecutionContainerBuilder,
 	Path,
 	WhereBuilder,
 	PathFactory,
 	ExecutionContainerFactory,
+} from './mapper'
+export type {
+	DataModificationEvent,
+	ExecutionContainer,
+	ExecutionContainerBuilder,
 	ExecutionContainerHook,
 	ExecutionContainerArgs,
 } from './mapper'

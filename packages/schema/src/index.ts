@@ -21,4 +21,5 @@ type Schema = {
 
 export type Writable<V> = {-readonly [K in keyof V]: V[K]}
 
-export { Input, Model, Acl, ActionsPayload, Schema, Validation, Value, Result, Actions, Settings }
+export { Input, Model, Acl, Validation, Result }
+export type { ActionsPayload, Schema, Value, Actions, Settings }

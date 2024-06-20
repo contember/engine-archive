@@ -3,13 +3,8 @@ export { SchemaMigrator } from '@contember/schema-migrations'
 export { typeDefs, devTypeDefs, Schema } from './schema'
 
 export {
-	ContentQueryExecutor,
-	ContentQueryExecutorContext,
-	ContentQueryExecutorQuery,
-	ContentQueryExecutorResult,
-	DatabaseContext,
+
 	DatabaseContextFactory,
-	Command,
 	formatSchemaName,
 	getJunctionTables,
 	Identity,
@@ -17,10 +12,18 @@ export {
 	ProjectInitializer,
 	ProjectMigrator,
 	SchemaVersionBuilder,
-	Stage,
 	StageBySlugQuery,
 	StageCreator,
 	StagesQuery,
+} from './model'
+export type {
+	ContentQueryExecutor,
+	ContentQueryExecutorContext,
+	ContentQueryExecutorQuery,
+	ContentQueryExecutorResult,
+	Command,
+	DatabaseContext,
+	Stage,
 	VersionedSchema,
 } from './model'
 export * from './SystemContainer'

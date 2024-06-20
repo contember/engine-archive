@@ -9,8 +9,18 @@ const packages = [
 ]
 
 const updatePackageJson = (packageJson: any, packageDir: string) => {
-	// custom code
-	return packageJson
+	if (packageJson.scripts.build) {
+		console.log(`${packageDir}: ${packageJson.scripts.build}`)
+	}
+	return {
+		...packageJson,
+		scripts: {
+			...packageJson.scripts,
+			"build": "yarn build:js:dev && yarn build:js:prod",
+			"build:js:dev": "NODE_ENV=development vite build --mode development",
+			"build:js:prod": "vite build --mode production",
+		}
+	}
 }
 
 packages.forEach(packageDir => {

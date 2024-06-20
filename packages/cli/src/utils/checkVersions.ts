@@ -4,7 +4,7 @@ import * as semver from 'semver'
 import { contemberDockerImages, tryReadMainDockerComposeConfig } from './dockerCompose'
 
 export const checkVersions = async (workspace: Workspace) => {
-	const cliVersion = getPackageVersion()
+	const cliVersion = await getPackageVersion()
 	const packageWorkspace = await workspace.resolvePackageWorkspace()
 	const errors: string[] = []
 

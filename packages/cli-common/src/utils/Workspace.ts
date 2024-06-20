@@ -25,7 +25,7 @@ type CreateWorkspaceArgs = {
 export const createWorkspace = async ({ workspaceDirectory, workspaceName, template }: CreateWorkspaceArgs) => {
 	template ??= '@contember/template-workspace'
 	await installTemplate(template, workspaceDirectory, 'workspace', {
-		version: getPackageVersion(),
+		version: await getPackageVersion(),
 		projectName: workspaceName,
 	})
 	const workspace = await Workspace.get(workspaceDirectory)
