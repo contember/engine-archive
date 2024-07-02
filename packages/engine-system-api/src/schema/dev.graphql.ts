@@ -9,15 +9,44 @@ const schema: DocumentNode = gql`
 	type Mutation {
 		truncate: TruncateResponse!
 		forceMigrate(migrations: [Migration!]!): MigrateResponse!
+		migrationAmend(input: MigrationAmend!): MigrationAmendResponse!
+		
 		migrationModify(migration: String!, modification: MigrationModification!): MigrationModifyResponse!
+		@deprecated(reason: "Use migrationAmend instead")
 		migrationDelete(migration: String!): MigrationDeleteResponse!
+		@deprecated(reason: "Use migrationAmend instead")
 	}
 
 	type TruncateResponse {
 		ok: Boolean!
 	}
 
-	input MigrationModification {
+    input MigrationAmend {
+        version: String!
+        name: String!
+        formatVersion: Int!
+        modifications: [Json!]!
+    }
+	
+	type MigrationAmendResponse {
+		ok: Boolean!
+		error: MigrationAmendError
+    }
+	
+	enum MigrationAmendErrorCode {
+		NOT_FOUND
+        INVALID_FORMAT
+        INVALID_SCHEMA
+        MIGRATION_FAILED
+    }
+	
+	type MigrationAmendError {
+		code: MigrationAmendErrorCode!
+		developerMessage: String!
+    }
+	
+
+    input MigrationModification {
 		version: String
 		name: String
 		formatVersion: Int
