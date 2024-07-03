@@ -4,5 +4,8 @@
 		"outDir": "../dist/src"
 	},
 	"references": [
+		{
+			"path": "../../schema/src"
+		}
 	]
 }
