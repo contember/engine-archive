@@ -9,13 +9,19 @@
 
 # Contember Engine
 
-Contember is an open-source platform that empowers developers to quickly build and manage data-driven web applications. It gives you full control over the administration interface and data structure. Enjoy GraphQL API, role-based access control, authentication and a well-structured PostgreSQL database. Built by developers for developers.
+## Maintenance Only Repository
 
-Contember Engine is a standalone server providing GraphQL API for your PostgreSQL database.
+This repository is dedicated to maintenance releases for the 1.x of Contember Engine.
 
+## Contributing
+
+For contributions, including new features and active development, please visit the main Contember repository:
+
+🔗 [contember/contember](https://github.com/contember/contember)
+
+Thank you for your interest in contributing to Contember!
+
+-----
 
 - [Start building with Contember](https://www.contember.com/start)
 - [Documentation](https://docs.contember.com/)
-
-
-
